@@ -1,0 +1,14 @@
+Package: fasteqa
+Type: Package
+Title: Efficient support functions for commutability.selectivity package
+Version: 1.0
+Date: 2022-04-22
+Author: Pernille Kjeilen Fauskanger
+Maintainer: Pernille Kjeilen Fauskanger <pernille.fauskanger@noklus.no>
+Description: This package is built using C++ code for heavy calculations.
+License: GPL (>= 2)
+Encoding: UTF-8
+Imports: 
+    Rcpp
+LinkingTo: Rcpp
+RoxygenNote: 7.1.2
