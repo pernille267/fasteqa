@@ -79,6 +79,19 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// SimulateEqaData
+List SimulateEqaData(int n, int R, int silence);
+RcppExport SEXP _fasteqa_SimulateEqaData(SEXP nSEXP, SEXP RSEXP, SEXP silenceSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< int >::type n(nSEXP);
+    Rcpp::traits::input_parameter< int >::type R(RSEXP);
+    Rcpp::traits::input_parameter< int >::type silence(silenceSEXP);
+    rcpp_result_gen = Rcpp::wrap(SimulateEqaData(n, R, silence));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_fasteqa_CharacterEstimatePrecision", (DL_FUNC) &_fasteqa_CharacterEstimatePrecision, 2},
@@ -86,6 +99,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_fasteqa_MeanOfReplicates", (DL_FUNC) &_fasteqa_MeanOfReplicates, 2},
     {"_fasteqa_PredictDeming", (DL_FUNC) &_fasteqa_PredictDeming, 7},
     {"_fasteqa_PredictOLS", (DL_FUNC) &_fasteqa_PredictOLS, 6},
+    {"_fasteqa_SimulateEqaData", (DL_FUNC) &_fasteqa_SimulateEqaData, 3},
     {NULL, NULL, 0}
 };
 

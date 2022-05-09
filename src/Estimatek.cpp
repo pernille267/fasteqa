@@ -97,8 +97,8 @@ List Estimatek(List data, int silence = 1) {
   }
   // Calculate remaining components
   if(lambda < 1){
-    NumericVector x = MS_A;
-    NumericVector y = MS_B;
+    NumericVector x = MS_B;
+    NumericVector y = MS_A;
     
     float mean_x = mean_A;
     float mean_y = mean_B;
@@ -130,8 +130,8 @@ List Estimatek(List data, int silence = 1) {
     return out;
   }
   else{
-    NumericVector x = Measurements( _, 0 );
-    NumericVector y = Measurements( _, 1 );
+    NumericVector x = MS_B;
+    NumericVector y = MS_A;
     
     float mean_x = mean_B;
     float mean_y = mean_A;
@@ -153,7 +153,7 @@ List Estimatek(List data, int silence = 1) {
       yhat[i] = b0 + b1 * x[i];
       sse += (y[i] - yhat[i]) * (y[i] - yhat[i]);
     }
-    float varpar = (sse / (n - 2)) * ((n + 2) / n);
+    float varpar = (sse / (nR - 2)) * ((nR + 2) / nR);
     float k = varpar / (Var_B * b1 * b1 + Var_A);
     List out = List::create(Named("k") = k);
     return out;

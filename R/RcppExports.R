@@ -121,3 +121,30 @@ PredictOLS <- function(data, NewData, Precision, MaxR, level, silence = 1L) {
     .Call(`_fasteqa_PredictOLS`, data, NewData, Precision, MaxR, level, silence)
 }
 
+#' Simulation of EQAM data based on study design, that is, n and R
+#'
+#' @title Simulate EQAM data for any combination of n and R
+#' @name SimulateEqaData
+#' 
+#' @param n The number of clinical sampels to generate. Must be an integer
+#' @param R The number of replicates on each clinical sample. Must be an integer
+#' @param silence Should progress reports be outputted. Defaults to no, which is \code{silence = 1}
+#' 
+#' @description Simulates a data set wit n x R rows, and 4 columns, where the two first is the base ID columns (SampleID and ReplicateID), and the last it the base Measurement columns (MP_A and MP_B). Enjoy
+#' @details In order to glue the elements of the output you may use \code{as.data.frame()}, \code{as.data.table()}, \code{as.tibble()}, etc., but the fastest is \code{setDT()} from the \code{data.table} package.
+#'
+#' @return A list where each list element is a column of the generated data
+#'
+#' @examples \dontrun{
+#'   library(data.table)
+#'   n <- 25
+#'   R <- 3
+#'   simulated_data <- setDT(SimulateEqaData(n = n, R = R))
+#' }
+#'
+NULL
+
+SimulateEqaData <- function(n = 25L, R = 3L, silence = 1L) {
+    .Call(`_fasteqa_SimulateEqaData`, n, R, silence)
+}
+
