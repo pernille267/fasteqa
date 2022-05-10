@@ -35,7 +35,7 @@ CharacterEstimatePrecision <- function(data, silence = 1L) {
 #' 
 #' @details Differences in non-selectivity between measurement systems may cause problems in e.g., evaluation of commutability. A large value of k indicate that we have have large differences in selectivity
 #' 
-#' @return A single estimate of k (in a list) based on the specific grouped data
+#' @return A single estimate of k (in a list) based on the specific grouped data. The k values are float values meaning that the precision is 1e-6 (six decimals precision). This is considered enough for us
 #'
 #' @examples \dontrun{
 #'   print("Estimate k")

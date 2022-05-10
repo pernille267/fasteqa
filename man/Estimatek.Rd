@@ -9,7 +9,7 @@
 \item{silence}{An integer (-1, 0, 1) that controls how much is printed. 0 shows some messages regarding temporary output, whereas -1 shows even more messages for debugging. -1 is used for superusers.}
 }
 \value{
-A single estimate of k (in a list) based on the specific grouped data
+A single estimate of k (in a list) based on the specific grouped data. The k values are float values meaning that the precision is 1e-6 (six decimals precision). This is considered enough for us
 }
 \description{
 Estimate the relative non-selectivity measure k, that is the ratio of the pooled prediction error variance and the sum of repeatability variances.

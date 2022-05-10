@@ -26,7 +26,9 @@ List PredictDeming(List data, NumericVector NewData, List Precision, int MaxR, f
   float Var_B = Precision["Var_B"];
   NumericVector x = data["MP_B"];
   NumericVector y = data["MP_A"];
+  float R = MaxR;
   int n = x.size();
+  float N = x.size();
   int m = y.size();
   int j = NewData.size();
   NumericVector ypred(j);
@@ -39,32 +41,24 @@ List PredictDeming(List data, NumericVector NewData, List Precision, int MaxR, f
   float gmyy = 0;
   float gmxy = 0;
   for(int i = 0; i < n; ++i){
-    gmxx += (x[i] - mean_x) * (x[i] - mean_x) / (n - 1);
-    gmyy += (y[i] - mean_y) * (y[i] - mean_y) / (n - 1);
-    gmxy += (x[i] - mean_x) * (y[i] - mean_y) / (n - 1);
+    gmxx += (x[i] - mean_x) * (x[i] - mean_x) / (N - 1);
+    gmyy += (y[i] - mean_y) * (y[i] - mean_y) / (N - 1);
+    gmxy += (x[i] - mean_x) * (y[i] - mean_y) / (N - 1);
   }
-  float cmxx = gmxx * (n - 1) / n;
-  float cmyy = gmyy * (n - 1) / n;
-  float cmxy = gmxy * (n - 1) / n;
+  float cmxx = gmxx * (N - 1) / N;
+  float cmyy = gmyy * (N - 1) / N;
+  float cmxy = gmxy * (N - 1) / N;
   // type = 0: J. Gillard and W. Fuller
   if(type == 0){
     float p1 = gmyy - lambda * gmxx;
-    float p2 = sqrt((gmyy - lambda * gmxx) * (gmyy - lambda * gmxx) + 4 * lambda * gmxy * gmxy);
-    float p3 = 2 * gmxy;
+    float p2 = sqrt(pow(gmyy - lambda * gmxx, 2) + 4.0 * lambda * pow(gmxy, 2));
+    float p3 = 2.0 * gmxy;
     float b1 = (p1 + p2) / p3;
     float b0 = mean_y - b1 * mean_x;
-    float AsyVarb1 = ((b1 * b1) / (n * gmxy * gmxy)) * ((gmxx * gmyy) - (gmxy * gmxy));
+    float AsyVarb1 = (pow(b1, 2) / (N * pow(gmxy, 2))) * ((gmxx * gmyy) - pow(gmxy, 2));
     NumericVector xpred(j);
-    NumericVector xhat(n);
-    float first_sum = 0;
-    float second_sum = 0;
-    float den = 2 * lambda * (n - 2);
-    for(int i = 0; i < n; ++i){
-      xhat[i] = x[i] + (b1 / (lambda + b1 * b1)) * (y[i] - b0 - b1 * x[i]);
-      first_sum += (x[i] - xhat[i]) * (x[i] - xhat[i]);
-      second_sum += (y[i] - b0 - b1 * xhat[i]) * (y[i] - b0 - b1 * xhat[i]);
-    }
-    float ShAdjusted = (first_sum + second_sum) / den;
+    float mu_hat = 0;
+    float ShAdjusted = (gmyy + (lambda * gmxx) - p2) / (2 * lambda);
     float SvAdjusted = lambda * ShAdjusted;
     if(silence == 0){
       Rcout << "You have choosed to estimate PB using standard approach (J. Gillard and Fuller)" << "\n";
@@ -77,36 +71,31 @@ List PredictDeming(List data, NumericVector NewData, List Precision, int MaxR, f
       Rcout << "The value of mxx is : " << gmxx << "\n";
       Rcout << "The value of myy is : " << gmyy << "\n";
       Rcout << "The value of mxy is : " << gmxy << "\n";
+      Rcout << "The value of R / 3 is : " << MaxR / 3.0 << "\n";
+      Rcout << "F-G uses " << n - 2 << " degrees of freedom" << "\n";
     }
     float tquant = R::qt((1 - level)/2, n - 2, 0, 0);
-    float ximxx = 0;
-    float ximyy = 0;
-    float ximxy = 0;
-    float ximean_x = mean(xhat);
-    for(int i = 0; i < n; ++i){
-      ximxx += (x[i] - mean_x) * (x[i] - mean_x) / (n - 1);
-      ximyy += (xhat[i] - ximean_x) * (xhat[i] - ximean_x) / (n - 1);
-      ximxy += (x[i] - mean_x) * (xhat[i] - ximean_x) / (n - 1);
-    }
-    float c1 = ximxy / ximxx;
-    float c0 = ximean_x - c1 * mean_x;
     for(int i = 0; i < j; ++i){
       ypred[i] = b0 + b1 * NewData[i];
-      xpred[i] = c0 + c1 * NewData[i];
+      xpred[i] = ((lambda / (lambda + pow(b1, 2))) * NewData[i]) + (b1 / (lambda + pow(b1, 2))) * (ypred[i] - b0);
     }
-    if(silence == -1){
+    for(int i = 0; i < n; ++i){
+      float mu_hat_part_i = ((lambda / (lambda + pow(b1, 2))) * x[i]) + (b1 / (lambda + pow(b1, 2))) * (y[i] - b0);
+      mu_hat += mu_hat_part_i / N;
+    }
+    if(silence == 0){
       Rcout << "In the F-G approach we estimate true concentration levels:" << "\n";
-      Rcout << "The estimated relationship between true concentration level and x is given by true = c0 + c1 * observed" << "\n";
-      Rcout << "c0 is observed to be  " << c0 << "\n";
-      Rcout << "c1 is observed to be  " << c1 << "\n";
-      Rcout << "In this particular case we have that xpred is  " << xpred[0] << "\n";
-      Rcout << "In this particular case we have that Newdata is  " << NewData[0] << "\n";
+      Rcout << "The estimated relationship between true and observed is" << "\n";
+      Rcout << "lambda / (lambda + b1^2) x_i + b1 / (lambda + b1^2) * (y_i - b0), which is" << "\n";
+      Rcout << "In this particular case (.obs 1) we have that estimated true concentration is :" << xpred[0] << "\n";
+      Rcout << "In this particular case (.obs 1) we had the observed measurement :" << NewData[0] << "\n";
+      Rcout << "Before dividing by R : " << (1.0 + 1.0 / N) * (pow(b1, 2) * ShAdjusted + SvAdjusted) << "\n";
+      Rcout << "After dividing by R : " << (1.0 + 1.0 / N) * (pow(b1, 2) * ShAdjusted + SvAdjusted) / R << "\n";
     }
-    float mean_xhat = mean(xhat);
     NumericVector lwr(j);
     NumericVector upr(j);
     for(int i = 0; i < j; ++i){
-      float PredVariance = AsyVarb1 * (xpred[i] - mean_xhat) * (xpred[i] - mean_xhat) + AsyVarb1 * ShAdjusted + (1 + 1 / n) * (b1 * b1 * ShAdjusted + SvAdjusted);
+      float PredVariance = AsyVarb1 * pow((xpred[i] - mu_hat), 2) + (AsyVarb1 * ShAdjusted / R) + (1.0 + 1.0 / N) * (b1 * b1 * ShAdjusted + SvAdjusted) / R;
       float PredError = sqrt(PredVariance);
       lwr[i] = ypred[i] - tquant * PredError;
       if(lwr[i] < 0){
@@ -126,10 +115,11 @@ List PredictDeming(List data, NumericVector NewData, List Precision, int MaxR, f
     float b1 = (p1 + p2) / p3;
     float b0 = mean_y - b1 * mean_x;
     float AsyVarb1 = ((b1 * b1) / (n * cmxy * cmxy)) * ((cmxx * cmyy) - (cmxy * cmxy));
-    float ShAdjusted = Var_B / MaxR;
+    float ShAdjusted = Var_B;
     float SvAdjusted = lambda * ShAdjusted;
     if(silence == 0){
       Rcout << "You have choosed to estimate PB using EP14's approach (CLSI)" << "\n";
+      Rcout << "The base value of sigma_h squared is" << ShAdjusted << "\n";
       Rcout << "The value of sigma_h squared is : " << ShAdjusted << "\n";
       Rcout << "The value of sigma_v squared is : " << SvAdjusted << "\n";
       Rcout << "The value of var(b1) is : " << AsyVarb1 << "\n";
@@ -138,6 +128,8 @@ List PredictDeming(List data, NumericVector NewData, List Precision, int MaxR, f
       Rcout << "The value of mxx is : " << cmxx << "\n";
       Rcout << "The value of myy is : " << cmyy << "\n";
       Rcout << "The value of mxy is : " << cmxy << "\n";
+      Rcout << "The value of R / 3 is : " << float(MaxR) / 3.0 << "\n";
+      Rcout << "CLSI uses " << n * (MaxR - 1) << "degrees of freedom" << "\n";
     }
     
     float tquant = R::qt((1 - level)/2, n * (MaxR - 1), 0, 0);
@@ -147,14 +139,16 @@ List PredictDeming(List data, NumericVector NewData, List Precision, int MaxR, f
     NumericVector lwr(j);
     NumericVector upr(j);
     for(int i = 0; i < j; ++i){
-      float PredVariance = AsyVarb1 * ((NewData[i] - mean_x) * (NewData[i] - mean_x)) + (1 + 1 / n) * (b1 * b1 * ShAdjusted + SvAdjusted);
+      float PredVariance = AsyVarb1 * ((NewData[i] - mean_x) * (NewData[i] - mean_x)) + (1.0 + 1.0 / N) * (b1 * b1 * ShAdjusted + SvAdjusted) / R;
       float PredError = sqrt(PredVariance);
       lwr[i] = ypred[i] - tquant * PredError;
       upr[i] = ypred[i] + tquant * PredError;
     }
     float clsi_ignores = AsyVarb1 * ShAdjusted;
-    if(silence == -1){
+    if(silence == 0){
       Rcout << "CLSI method ignores this much prediction variance : " << clsi_ignores << "\n";
+      Rcout << "Before dividing by R" << (1.0 + 1.0 / N) * (b1 * b1 * ShAdjusted + SvAdjusted) << "\n";
+      Rcout << "After dividing by R" << (1.0 + 1.0 / N) * (b1 * b1 * ShAdjusted + SvAdjusted) / R << "\n";
     }
     List out = List::create(Named("nx") = NewData, Named("fit") = round(ypred, 5), Named("lwr") = round(lwr, 5), Named("upr") = round(upr, 5));
     return out;
