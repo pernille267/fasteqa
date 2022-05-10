@@ -5,14 +5,14 @@ using namespace Rcpp;
 //' 
 //' @title Estimate MS precision measures
 //' @name Estimatek
-//' @param data A data table or data frame converted to a list so that each column is a unique list element. The ID columns must be of character type and contain SampleID, ReplicateID, MP_A and MP_B 
+//' @param data A data table or a data frame converted to a list so that each column is a unique list element. The ID columns must be of character type and contain SampleID, ReplicateID, MP_A and MP_B 
 //' @param silence An integer (-1, 0, 1) that controls how much is printed. 0 shows some messages regarding temporary output, whereas -1 shows even more messages for debugging. -1 is used for superusers.
 //' 
 //' @description Estimate the relative non-selectivity measure k, that is the ratio of the pooled prediction error variance and the sum of repeatability variances.  
 //' 
 //' @details Differences in non-selectivity between measurement systems may cause problems in e.g., evaluation of commutability. A large value of k indicate that we have have large differences in selectivity
 //' 
-//' @return A single estimate of k (in a list) based on the specific grouped data
+//' @return A single estimate of k (in a list) based on the specific grouped data. The k values are float values meaning that the precision is 1e-6 (six decimals precision). This is considered enough for us
 //'
 //' @examples \dontrun{
 //'   print("Estimate k")
@@ -25,6 +25,7 @@ List Estimatek(List data, int silence = 1) {
   CharacterVector SampleID = data["SampleID"];
   CharacterVector ReplicateID = data["ReplicateID"];
   int nR = SampleID.size();
+  float NR = SampleID.size();
   CharacterMatrix IDs ( nR, 2 );
   NumericVector MS_A = data["MP_A"];
   NumericVector MS_B = data["MP_B"];
@@ -97,8 +98,8 @@ List Estimatek(List data, int silence = 1) {
   }
   // Calculate remaining components
   if(lambda < 1){
-    NumericVector x = MS_B;
-    NumericVector y = MS_A;
+    NumericVector x = MS_A;
+    NumericVector y = MS_B;
     
     float mean_x = mean_A;
     float mean_y = mean_B;
@@ -121,10 +122,17 @@ List Estimatek(List data, int silence = 1) {
     NumericVector yhat(nR);
     for(int i = 0; i < nR; ++i){
       yhat[i] = b0 + b1 * x[i];
-      sse += (y[i] - yhat[i]) * (y[i] - yhat[i]);
+      sse += (y[i] - yhat[i]) * (y[i] - yhat[i]) / (NR - 2);
     }
     
-    float varpar = (sse / (nR - 2)) * ((nR + 2) / nR);
+    float varpar = sse * ((NR + 2) / NR);
+    if(silence == 0){
+      Rcout << "The value of bias is: " << ((NR + 2) / NR) << "\n";
+      Rcout << "The value of mse is: " << sse / (NR - 2) << "\n";
+      Rcout << "The value of SD_R squared is: " << varpar << "\n";
+      Rcout << "The sum of MS variances is: " << Var_B * b1 * b1 + Var_A << "\n";
+      Rcout << " ... " << "\n";
+    }
     float k = varpar / (Var_A * b1 * b1 + Var_B);
     List out = List::create(Named("k") = k);
     return out;
@@ -151,9 +159,16 @@ List Estimatek(List data, int silence = 1) {
     NumericVector yhat(nR);
     for(int i = 0; i < nR; ++i){
       yhat[i] = b0 + b1 * x[i];
-      sse += (y[i] - yhat[i]) * (y[i] - yhat[i]);
+      sse += (y[i] - yhat[i]) * (y[i] - yhat[i]) / (NR - 2);
     }
-    float varpar = (sse / (nR - 2)) * ((nR + 2) / nR);
+    float varpar = sse * ((NR + 2) / NR);
+    if(silence == 0){
+      Rcout << "The value of bias is: " << ((NR + 2) / NR) << "\n";
+      Rcout << "The value of mse is: " << sse / (NR - 2) << "\n";
+      Rcout << "The value of SD_R squared is: " << varpar << "\n";
+      Rcout << "The sum of MS variances is: " << Var_B * b1 * b1 + Var_A << "\n";
+      Rcout << " ... " << "\n";
+    }
     float k = varpar / (Var_B * b1 * b1 + Var_A);
     List out = List::create(Named("k") = k);
     return out;

@@ -28,7 +28,7 @@ CharacterEstimatePrecision <- function(data, silence = 1L) {
 #' 
 #' @title Estimate MS precision measures
 #' @name Estimatek
-#' @param data A data table or data frame converted to a list so that each column is a unique list element. The ID columns must be of character type and contain SampleID, ReplicateID, MP_A and MP_B 
+#' @param data A data table or a data frame converted to a list so that each column is a unique list element. The ID columns must be of character type and contain SampleID, ReplicateID, MP_A and MP_B 
 #' @param silence An integer (-1, 0, 1) that controls how much is printed. 0 shows some messages regarding temporary output, whereas -1 shows even more messages for debugging. -1 is used for superusers.
 #' 
 #' @description Estimate the relative non-selectivity measure k, that is the ratio of the pooled prediction error variance and the sum of repeatability variances.  

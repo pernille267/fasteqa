@@ -4,7 +4,7 @@
 \alias{Estimatek}
 \title{Estimate MS precision measures}
 \arguments{
-\item{data}{A data table or data frame converted to a list so that each column is a unique list element. The ID columns must be of character type and contain SampleID, ReplicateID, MP_A and MP_B}
+\item{data}{A data table or a data frame converted to a list so that each column is a unique list element. The ID columns must be of character type and contain SampleID, ReplicateID, MP_A and MP_B}
 
 \item{silence}{An integer (-1, 0, 1) that controls how much is printed. 0 shows some messages regarding temporary output, whereas -1 shows even more messages for debugging. -1 is used for superusers.}
 }
