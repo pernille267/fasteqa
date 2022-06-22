@@ -47,8 +47,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // PredictDeming
-List PredictDeming(List data, NumericVector NewData, List Precision, int MaxR, float level, int type, int silence);
-RcppExport SEXP _fasteqa_PredictDeming(SEXP dataSEXP, SEXP NewDataSEXP, SEXP PrecisionSEXP, SEXP MaxRSEXP, SEXP levelSEXP, SEXP typeSEXP, SEXP silenceSEXP) {
+List PredictDeming(List data, NumericVector NewData, List Precision, int MaxR, float level, int type, int rounding, int CalculateLatent, int silence);
+RcppExport SEXP _fasteqa_PredictDeming(SEXP dataSEXP, SEXP NewDataSEXP, SEXP PrecisionSEXP, SEXP MaxRSEXP, SEXP levelSEXP, SEXP typeSEXP, SEXP roundingSEXP, SEXP CalculateLatentSEXP, SEXP silenceSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -58,8 +58,10 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< int >::type MaxR(MaxRSEXP);
     Rcpp::traits::input_parameter< float >::type level(levelSEXP);
     Rcpp::traits::input_parameter< int >::type type(typeSEXP);
+    Rcpp::traits::input_parameter< int >::type rounding(roundingSEXP);
+    Rcpp::traits::input_parameter< int >::type CalculateLatent(CalculateLatentSEXP);
     Rcpp::traits::input_parameter< int >::type silence(silenceSEXP);
-    rcpp_result_gen = Rcpp::wrap(PredictDeming(data, NewData, Precision, MaxR, level, type, silence));
+    rcpp_result_gen = Rcpp::wrap(PredictDeming(data, NewData, Precision, MaxR, level, type, rounding, CalculateLatent, silence));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -97,7 +99,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_fasteqa_CharacterEstimatePrecision", (DL_FUNC) &_fasteqa_CharacterEstimatePrecision, 2},
     {"_fasteqa_Estimatek", (DL_FUNC) &_fasteqa_Estimatek, 2},
     {"_fasteqa_MeanOfReplicates", (DL_FUNC) &_fasteqa_MeanOfReplicates, 2},
-    {"_fasteqa_PredictDeming", (DL_FUNC) &_fasteqa_PredictDeming, 7},
+    {"_fasteqa_PredictDeming", (DL_FUNC) &_fasteqa_PredictDeming, 9},
     {"_fasteqa_PredictOLS", (DL_FUNC) &_fasteqa_PredictOLS, 6},
     {"_fasteqa_SimulateEqaData", (DL_FUNC) &_fasteqa_SimulateEqaData, 3},
     {NULL, NULL, 0}

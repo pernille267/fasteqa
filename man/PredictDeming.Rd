@@ -10,11 +10,15 @@
 
 \item{Precision}{A list of the Precision estimates based on \code{CharacterEstimatePrecision()}}
 
-\item{MaxR}{The number of replicates for the majority of clinical samples. For example, if 18 of 25 CSs are meausured in triplicate, and the remaining seven is measured in duplicate, we use MaxR = 3}
+\item{MaxR}{The number of replicates for the majority of clinical samples. For example, if 18 of 25 CSs are meausured in triplicate, and the remaining seven is measured in duplicate, we use \code{MaxR = 3}}
 
 \item{level}{the confidence level of the pointwise prediction intervals constructed. If the prediction intervals are used to evaluate commutability of EQAMs, you must remember to adjusts for simultanuous testing, e.g., Bonferroni correction}
 
 \item{type}{which type of estimation approach should be used to construct the pointwise prediction intervals? \code{type = 0} correspond to J. Gillard and W. Fullers' approach. \code{type = 1} corresponds to CLSI's approach (elaborated upon in EP14). The first-mentioned is the default choice}
+
+\item{rounding}{how many decimal places should be use in the estimates? Default is 3}
+
+\item{Should}{estimated true concentration levels be part of the output? Default is 0 which signify no}
 
 \item{silence}{an integer that controls progress reports. Set to 0 for these progress reports to appear. For additional debugging information, set this to \code{-1}. Default is \code{1}, which means that only the output will be returned, and no messages}
 }

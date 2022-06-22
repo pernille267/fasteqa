@@ -85,9 +85,11 @@ MeanOfReplicates <- function(data, silence = 1L) {
 #' @param data A data table or data frame converted to a list so that each column is a unique list element. Must contain the following columns: MP_A and MP_B
 #' @param NewData A numeric vector of which x values are used to predict y
 #' @param Precision A list of the Precision estimates based on \code{CharacterEstimatePrecision()}
-#' @param MaxR The number of replicates for the majority of clinical samples. For example, if 18 of 25 CSs are meausured in triplicate, and the remaining seven is measured in duplicate, we use MaxR = 3
+#' @param MaxR The number of replicates for the majority of clinical samples. For example, if 18 of 25 CSs are meausured in triplicate, and the remaining seven is measured in duplicate, we use \code{MaxR = 3}
 #' @param level the confidence level of the pointwise prediction intervals constructed. If the prediction intervals are used to evaluate commutability of EQAMs, you must remember to adjusts for simultanuous testing, e.g., Bonferroni correction
 #' @param type which type of estimation approach should be used to construct the pointwise prediction intervals? \code{type = 0} correspond to J. Gillard and W. Fullers' approach. \code{type = 1} corresponds to CLSI's approach (elaborated upon in EP14). The first-mentioned is the default choice
+#' @param rounding how many decimal places should be use in the estimates? Default is 3
+#' @param Should estimated true concentration levels be part of the output? Default is 0 which signify no. This will only return something if \code{type = 0}
 #' @param silence an integer that controls progress reports. Set to 0 for these progress reports to appear. For additional debugging information, set this to \code{-1}. Default is \code{1}, which means that only the output will be returned, and no messages
 #' 
 #' @description Estimation of prediction intervals based on the Deming model is relevant in e.g., commutability evaluation of EQAMs. 
@@ -96,8 +98,8 @@ MeanOfReplicates <- function(data, silence = 1L) {
 #'
 NULL
 
-PredictDeming <- function(data, NewData, Precision, MaxR, level = 0.99, type = 0L, silence = 1L) {
-    .Call(`_fasteqa_PredictDeming`, data, NewData, Precision, MaxR, level, type, silence)
+PredictDeming <- function(data, NewData, Precision, MaxR, level = 0.99, type = 0L, rounding = 3L, CalculateLatent = 0L, silence = 1L) {
+    .Call(`_fasteqa_PredictDeming`, data, NewData, Precision, MaxR, level, type, rounding, CalculateLatent, silence)
 }
 
 #' Estimate pointwise prediction intervals based on OLS regression
