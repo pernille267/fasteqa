@@ -18,7 +18,7 @@
 
 \item{rounding}{how many decimal places should be use in the estimates? Default is 3}
 
-\item{Should}{estimated true concentration levels be part of the output? Default is 0 which signify no}
+\item{Should}{estimated true concentration levels be part of the output? Default is 0 which signify no. This will only return something if \code{type = 0}}
 
 \item{silence}{an integer that controls progress reports. Set to 0 for these progress reports to appear. For additional debugging information, set this to \code{-1}. Default is \code{1}, which means that only the output will be returned, and no messages}
 }

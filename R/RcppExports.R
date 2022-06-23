@@ -150,3 +150,30 @@ SimulateEqaData <- function(n = 25L, R = 3L, silence = 1L) {
     .Call(`_fasteqa_SimulateEqaData`, n, R, silence)
 }
 
+#' Resample clustered EQA clinical sample data
+#' 
+#' @title Resample clustered EQA clinical sample data
+#' @name resample_samples
+#' 
+#' @param data A list or a data table with elements/columns \code{SampleID}, \code{ReplicateID}, \code{MP_A} and \code{MP_B}. \code{SampleID} and \code{ReplicateID} must be of character type for the function to operate correctly
+#' @param silence An integer that controls the progress reports outputted for debugging and further examination of the command. \code{silence = -1} or \code{silence = 0} signify that progress reports should be printed. Default is \code{silence = 1} which suppresses all printing
+#'
+#' @description In order to construct bootstrap confidence intervals and do inference on a set of population parameters where the underlying distribution is complex, will require resample of clustered data. This function is both efficient and does its job, but at a cost of a strict input requirement
+#'
+#' @details \code{resample_samples()} is a very efficient algorithm to resample EQA. Combine with \code{Estimatek()} to resample k or combine with \code{CharacterEstimatePrecision()} to resample variability measures such as CVs and variances. May also be combined with other functions
+#'
+#' @return A list containing the resampled EQA clinical sample data. Use \code{setDT()} for maximum efficiency if needed to convert the resampled data to a data table
+#'
+#' @examples \dontrun{
+#'   library(commutability.selectivity)
+#'   data <- sdwdnsp2()
+#'   data$SampleID <- as.character(data$SampleID)
+#'   data$ReplicateID <- as.character(data$ReplicateID)
+#'   resampled_data <- resample_samples(data)
+#' }
+NULL
+
+resample_samples <- function(data, silence = 1L) {
+    .Call(`_fasteqa_resample_samples`, data, silence)
+}
+

@@ -43,7 +43,7 @@ List PredictOLS(List data, NumericVector NewData, List Precision, int MaxR, floa
     float mse = 0;
     for(int i = 0; i < n; ++i){
       float yhat = b0 + b1 * x[i];
-      mse += (y[i] - yhat) * (y[i] - yhat) / (n - 2) / MaxR;
+      mse += MaxR * (y[i] - yhat) * (y[i] - yhat) / (n - 2);
     }
     mse = sqrt(mse);
     float tquant = R::qt((1 - level)/2, n - 2, 0, 0);
