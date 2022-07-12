@@ -87,6 +87,18 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// estimate_zeta
+List estimate_zeta(List data, int silence);
+RcppExport SEXP _fasteqa_estimate_zeta(SEXP dataSEXP, SEXP silenceSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< List >::type data(dataSEXP);
+    Rcpp::traits::input_parameter< int >::type silence(silenceSEXP);
+    rcpp_result_gen = Rcpp::wrap(estimate_zeta(data, silence));
+    return rcpp_result_gen;
+END_RCPP
+}
 // fun_of_replicates
 List fun_of_replicates(List data, String fun, int silence);
 RcppExport SEXP _fasteqa_fun_of_replicates(SEXP dataSEXP, SEXP funSEXP, SEXP silenceSEXP) {
@@ -141,6 +153,18 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// resample_fun_data
+List resample_fun_data(List data, int make_unique);
+RcppExport SEXP _fasteqa_resample_fun_data(SEXP dataSEXP, SEXP make_uniqueSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< List >::type data(dataSEXP);
+    Rcpp::traits::input_parameter< int >::type make_unique(make_uniqueSEXP);
+    rcpp_result_gen = Rcpp::wrap(resample_fun_data(data, make_unique));
+    return rcpp_result_gen;
+END_RCPP
+}
 // resample_samples
 List resample_samples(List data, int silence);
 RcppExport SEXP _fasteqa_resample_samples(SEXP dataSEXP, SEXP silenceSEXP) {
@@ -172,10 +196,12 @@ static const R_CallMethodDef CallEntries[] = {
     {"_fasteqa_PredictDeming", (DL_FUNC) &_fasteqa_PredictDeming, 9},
     {"_fasteqa_PredictOLS", (DL_FUNC) &_fasteqa_PredictOLS, 6},
     {"_fasteqa_bootstrap_ci", (DL_FUNC) &_fasteqa_bootstrap_ci, 5},
+    {"_fasteqa_estimate_zeta", (DL_FUNC) &_fasteqa_estimate_zeta, 2},
     {"_fasteqa_fun_of_replicates", (DL_FUNC) &_fasteqa_fun_of_replicates, 3},
     {"_fasteqa_global_precision_estimates", (DL_FUNC) &_fasteqa_global_precision_estimates, 2},
     {"_fasteqa_leave_one_out", (DL_FUNC) &_fasteqa_leave_one_out, 2},
     {"_fasteqa_predict_eqa", (DL_FUNC) &_fasteqa_predict_eqa, 7},
+    {"_fasteqa_resample_fun_data", (DL_FUNC) &_fasteqa_resample_fun_data, 2},
     {"_fasteqa_resample_samples", (DL_FUNC) &_fasteqa_resample_samples, 2},
     {"_fasteqa_simulate_eqa_data", (DL_FUNC) &_fasteqa_simulate_eqa_data, 2},
     {NULL, NULL, 0}

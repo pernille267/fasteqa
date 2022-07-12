@@ -140,6 +140,36 @@ bootstrap_ci <- function(bootstrapped_parameter_estimates, original_parameter_es
     .Call(`_fasteqa_bootstrap_ci`, bootstrapped_parameter_estimates, original_parameter_estimate, type, level, silence)
 }
 
+#' Estimate differences in non-selectivity with zeta
+#' 
+#' @title Estimate differences in non-selectivity with zeta
+#' @name estimate_zeta
+#' @param data \code{list} or \code{data table} - Data with elements/columns \code{SampleID}, \code{ReplicateID}, \code{MP_A} and \code{MP_B}
+#' @param silence \code{integer} - How much progress reports should be returned. Note that returning progress reports will slow down the performance drastically. There are three valid inputs:
+#' \itemize{
+#'   \item{\code{1: }}{All progress reports are silenced and is the default}
+#'   \item{\code{0: }}{Some progress reports are delivered, but debugging reports are suppressed}
+#'   \item{\code{-1: }}{All prorgress reports are delivered}
+#' }
+#' 
+#' @description Estimate the degree of differences in non-selectivity with zeta. Zeta is is the ratio of the pooled average prediction error variance and the sum of analytical variances.  
+#' 
+#' @details Differences in non-selectivity between measurement systems may cause problems in e.g., evaluation of commutability. A large value of zeta indicates that we have have large differences in non-selectivity between compared measurement systems. An upper limit of acceptable zeta may be determined based on the allowable increase in prediction interval width and analyte of relevance
+#' 
+#' @return A list with the point estimate of zeta. The zeta value is a float value, meaning that the precision is 1e-6 (six decimals precision).
+#'
+#' @examples \dontrun{
+#'   library(fasteqa)
+#'   data <- simulate_data_eqa(list(n = 25, R = 3, cvx = 0.06, cvy = 0.04))
+#'   estimate_zeta(data)
+#' }
+#'
+NULL
+
+estimate_zeta <- function(data, silence = 1L) {
+    .Call(`_fasteqa_estimate_zeta`, data, silence)
+}
+
 #' Apply a mathematical summary function on every SampleID
 #' 
 #' @title Apply a mathematical summary function on every SampleID
@@ -297,6 +327,34 @@ NULL
 
 predict_eqa <- function(data, new_data, imprecision_estimates, R = 3L, method = "fg", level = 0.99, rounding = 3L) {
     .Call(`_fasteqa_predict_eqa`, data, new_data, imprecision_estimates, R, method, level, rounding)
+}
+
+#' Resample fun-of-replicates data
+#' 
+#' @title Resample fun-of-replicates data
+#' @name resample_fun_data
+#' 
+#' @param data \code{list} or \code{data table} - Must contain \code{SampleID}, \code{MP_A} and \code{MP_B}. \code{SampleID} and \code{ReplicateID} must be of character type, or else an error is thrown
+#' @param make_unique - \code{integer} that controls the output SampleID. If \code{make_unique = 1}, the default, new SampleIDs will be made. Conversely \code{make_unique = 0} will use the original SampleIDs. The latter is not recommended because potential calculations are affected by this 
+#'
+#' @description In order to construct bootstrap confidence intervals and do inference on a set of population parameters where the underlying distribution is complex, will require bootstrap replicates. This function is both efficient and does its job, but at a cost of a strict input requirement
+#'
+#' @details Combine with e.g., \code{predict_eqa()}, to estimate classification rates and more
+#'
+#' @return A list containing the resampled fun-of-replicates data. Use \code{setDT()} for maximum efficiency if you desire to convert the resampled data to a data table
+#'
+#' @examples \dontrun{
+#'   library(fasteqa)
+#'   data <- simulate_data_eqa(list(n = 25, R = 3, cvx = 0.06, cvy = 0.04))
+#'   data$SampleID <- as.character(data$SampleID)
+#'   data$ReplicateID <- as.character(data$ReplicateID)
+#'   data <- fun_of_replicates(data, fun = "median")
+#'   resampled_data <- resample_fun_data(data)
+#' }
+NULL
+
+resample_fun_data <- function(data, make_unique = 1L) {
+    .Call(`_fasteqa_resample_fun_data`, data, make_unique)
 }
 
 #' Resample clustered EQA clinical sample data
