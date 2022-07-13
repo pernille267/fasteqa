@@ -25,53 +25,6 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// Estimatek
-List Estimatek(List data, int silence);
-RcppExport SEXP _fasteqa_Estimatek(SEXP dataSEXP, SEXP silenceSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< List >::type data(dataSEXP);
-    Rcpp::traits::input_parameter< int >::type silence(silenceSEXP);
-    rcpp_result_gen = Rcpp::wrap(Estimatek(data, silence));
-    return rcpp_result_gen;
-END_RCPP
-}
-// PredictDeming
-List PredictDeming(List data, NumericVector NewData, List Precision, int MaxR, float level, int type, int rounding, int CalculateLatent, int silence);
-RcppExport SEXP _fasteqa_PredictDeming(SEXP dataSEXP, SEXP NewDataSEXP, SEXP PrecisionSEXP, SEXP MaxRSEXP, SEXP levelSEXP, SEXP typeSEXP, SEXP roundingSEXP, SEXP CalculateLatentSEXP, SEXP silenceSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< List >::type data(dataSEXP);
-    Rcpp::traits::input_parameter< NumericVector >::type NewData(NewDataSEXP);
-    Rcpp::traits::input_parameter< List >::type Precision(PrecisionSEXP);
-    Rcpp::traits::input_parameter< int >::type MaxR(MaxRSEXP);
-    Rcpp::traits::input_parameter< float >::type level(levelSEXP);
-    Rcpp::traits::input_parameter< int >::type type(typeSEXP);
-    Rcpp::traits::input_parameter< int >::type rounding(roundingSEXP);
-    Rcpp::traits::input_parameter< int >::type CalculateLatent(CalculateLatentSEXP);
-    Rcpp::traits::input_parameter< int >::type silence(silenceSEXP);
-    rcpp_result_gen = Rcpp::wrap(PredictDeming(data, NewData, Precision, MaxR, level, type, rounding, CalculateLatent, silence));
-    return rcpp_result_gen;
-END_RCPP
-}
-// PredictOLS
-List PredictOLS(List data, NumericVector NewData, List Precision, int MaxR, float level, int silence);
-RcppExport SEXP _fasteqa_PredictOLS(SEXP dataSEXP, SEXP NewDataSEXP, SEXP PrecisionSEXP, SEXP MaxRSEXP, SEXP levelSEXP, SEXP silenceSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< List >::type data(dataSEXP);
-    Rcpp::traits::input_parameter< NumericVector >::type NewData(NewDataSEXP);
-    Rcpp::traits::input_parameter< List >::type Precision(PrecisionSEXP);
-    Rcpp::traits::input_parameter< int >::type MaxR(MaxRSEXP);
-    Rcpp::traits::input_parameter< float >::type level(levelSEXP);
-    Rcpp::traits::input_parameter< int >::type silence(silenceSEXP);
-    rcpp_result_gen = Rcpp::wrap(PredictOLS(data, NewData, Precision, MaxR, level, silence));
-    return rcpp_result_gen;
-END_RCPP
-}
 // bootstrap_ci
 NumericVector bootstrap_ci(NumericVector bootstrapped_parameter_estimates, float original_parameter_estimate, int type, float level, int silence);
 RcppExport SEXP _fasteqa_bootstrap_ci(SEXP bootstrapped_parameter_estimatesSEXP, SEXP original_parameter_estimateSEXP, SEXP typeSEXP, SEXP levelSEXP, SEXP silenceSEXP) {
@@ -192,9 +145,6 @@ END_RCPP
 
 static const R_CallMethodDef CallEntries[] = {
     {"_fasteqa_BCa_bootstrap_ci", (DL_FUNC) &_fasteqa_BCa_bootstrap_ci, 5},
-    {"_fasteqa_Estimatek", (DL_FUNC) &_fasteqa_Estimatek, 2},
-    {"_fasteqa_PredictDeming", (DL_FUNC) &_fasteqa_PredictDeming, 9},
-    {"_fasteqa_PredictOLS", (DL_FUNC) &_fasteqa_PredictOLS, 6},
     {"_fasteqa_bootstrap_ci", (DL_FUNC) &_fasteqa_bootstrap_ci, 5},
     {"_fasteqa_estimate_zeta", (DL_FUNC) &_fasteqa_estimate_zeta, 2},
     {"_fasteqa_fun_of_replicates", (DL_FUNC) &_fasteqa_fun_of_replicates, 3},
