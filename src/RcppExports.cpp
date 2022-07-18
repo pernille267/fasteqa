@@ -89,6 +89,23 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// merge_results
+List merge_results(List pb_data, List ce_data, List zeta_data, List imprecision_data, int rounding, bool include_imprecision_estimates, bool cv_percent);
+RcppExport SEXP _fasteqa_merge_results(SEXP pb_dataSEXP, SEXP ce_dataSEXP, SEXP zeta_dataSEXP, SEXP imprecision_dataSEXP, SEXP roundingSEXP, SEXP include_imprecision_estimatesSEXP, SEXP cv_percentSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< List >::type pb_data(pb_dataSEXP);
+    Rcpp::traits::input_parameter< List >::type ce_data(ce_dataSEXP);
+    Rcpp::traits::input_parameter< List >::type zeta_data(zeta_dataSEXP);
+    Rcpp::traits::input_parameter< List >::type imprecision_data(imprecision_dataSEXP);
+    Rcpp::traits::input_parameter< int >::type rounding(roundingSEXP);
+    Rcpp::traits::input_parameter< bool >::type include_imprecision_estimates(include_imprecision_estimatesSEXP);
+    Rcpp::traits::input_parameter< bool >::type cv_percent(cv_percentSEXP);
+    rcpp_result_gen = Rcpp::wrap(merge_results(pb_data, ce_data, zeta_data, imprecision_data, rounding, include_imprecision_estimates, cv_percent));
+    return rcpp_result_gen;
+END_RCPP
+}
 // predict_eqa
 List predict_eqa(List data, List new_data, List imprecision_estimates, int R, String method, float level, int rounding);
 RcppExport SEXP _fasteqa_predict_eqa(SEXP dataSEXP, SEXP new_dataSEXP, SEXP imprecision_estimatesSEXP, SEXP RSEXP, SEXP methodSEXP, SEXP levelSEXP, SEXP roundingSEXP) {
@@ -150,6 +167,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_fasteqa_fun_of_replicates", (DL_FUNC) &_fasteqa_fun_of_replicates, 3},
     {"_fasteqa_global_precision_estimates", (DL_FUNC) &_fasteqa_global_precision_estimates, 2},
     {"_fasteqa_leave_one_out", (DL_FUNC) &_fasteqa_leave_one_out, 2},
+    {"_fasteqa_merge_results", (DL_FUNC) &_fasteqa_merge_results, 7},
     {"_fasteqa_predict_eqa", (DL_FUNC) &_fasteqa_predict_eqa, 7},
     {"_fasteqa_resample_fun_data", (DL_FUNC) &_fasteqa_resample_fun_data, 2},
     {"_fasteqa_resample_samples", (DL_FUNC) &_fasteqa_resample_samples, 2},

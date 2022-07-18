@@ -208,6 +208,36 @@ leave_one_out <- function(data, loo_id = 1L) {
     .Call(`_fasteqa_leave_one_out`, data, loo_id)
 }
 
+#' Merge all computations efficiently into one object
+#' 
+#' @title Merge all computations efficiently into one object
+#' @name merge_results
+#' @param pb_data \code{list} or \code{data table} - Prediction band data, which must at least contain \code{comparison}, \code{predictor}, \code{prediction}, \code{lwr} and \code{upr}
+#' @param ce_data \code{list} or \code{data table} - Commutability evaluation data for evaluated material, which must at least contain \code{comparison}, \code{SampleID}, \code{MP_B}, \code{MP_A}, \code{prediction}, \code{lwr}, \code{upr} and \code{inside}
+#' @param zeta_data \code{list} or \code{data table} - Zeta estimates, which must at least contain \code{comparison}, \code{zeta}, \code{lwr}, \code{upr}, \code{zeta_critical}, \code{zeta_conclusion}
+#' @param imprecision_data \code{list} or \code{data table} - global imprecision estimates, which must at least contain \code{comparison}, \code{CV_A}, \code{CV_A_lwr}, \code{CV_A_upr}, \code{CV_B}, \code{CV_B_lwr}, \code{CV_B_upr}, \code{lambda}, \code{lambda_lwr} and \code{lambda_upr}. This one may be omitted, if one is uninterested in viewing the imprecision estimates
+#' @param rounding \code{integer} - How many decimals should be included in the float type variables? The implicit maximum is 6 decimals, meaning that any integer larger than 6 will produce a warning
+#' @param include_imprecision_estimates \code{boolean} - Should imprecision estimates be part of the merged results. Default is \code{FALSE}
+#' @param cv_percent \code{boolean} - Should CVs be given in percent or in standard decimal number. The latter is the default
+#' 
+#' @description Merge all the essential components (e.g., pb_data, ce_data, zeta_data) of the commutability evaluation analysis into one object, so it will be easier to plot and present commutability evaluation results
+#' 
+#' @details The merging is done with respect to the comparison column that needs to be common in every data input. The effects of missing values in the comparison variable may yield unexpected results or errors, so ensure that at least this column, is NA-free. 
+#' 
+#' @return A \code{list} with two main components, merged data results for commutability evaluation of control materials and merged results for prediction bands. The latter may be used to plot commutability evaluation plots
+#'
+#' @examples \dontrun{
+#'   library(fasteqa)
+#'   data <- simulate_data_eqa(list(n = 25, R = 3, cvx = 0.06, cvy = 0.04))
+#'   estimate_zeta(data)
+#' }
+#'
+NULL
+
+merge_results <- function(pb_data, ce_data, zeta_data, imprecision_data, rounding = 3L, include_imprecision_estimates = TRUE, cv_percent = FALSE) {
+    .Call(`_fasteqa_merge_results`, pb_data, ce_data, zeta_data, imprecision_data, rounding, include_imprecision_estimates, cv_percent)
+}
+
 #' Estimate prediction intervals for EQA data with Deming or OLS
 #' 
 #' @title Estimate prediction intervals for EQA data with Deming or OLS
