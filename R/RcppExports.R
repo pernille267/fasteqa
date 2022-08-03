@@ -345,6 +345,45 @@ resample_samples <- function(data, silence = 1L) {
     .Call(`_fasteqa_resample_samples`, data, silence)
 }
 
+#' Obtain the residuals based on data and imprecision estimates
+#' 
+#' @title Obtain the residuals based on data and imprecision estimates
+#' @name residuals_eqa
+#' 
+#' @param data \code{list} or \code{data table} - Mean-of-replicates clinical sample data with elements/columns \code{SampleID}, \code{MP_A} and \code{MP_B}
+#' @param imprecision_estimates \code{list} or \code{data table} - Imprecision estimates e.g., that which are outputted by \code{global_precision_estimates()}. Minimum requirement: \code{lambda} and \code{Var_B} must be part of the  
+#' @param method character - Which method should be used to obtain the residuals. Default is \code{fg}. At the moment, possible values for method is
+#' \itemize{
+#'   \item{\code{fg: }}{Standard Deming regression, using components from W. Fuller and J. Gillards work}
+#'   \item{\code{clsi: }}{Standard Deming regression based the EP14 standard, which is derived by J. Vaks}
+#'   \item{\code{ols: }}{Ordinary least squares regression}
+#' }
+#' @param studentize integer - \code{1} (default) for yes, and \code{0} for no.
+#'
+#' @description A simple function extracting the residuals based on \code{data}
+#' 
+#'
+#' @details The practical differences of outcome between the three available methods may be small. \code{fg} estimates latent values, and uses n - 1 degrees of freedom instead of n which is used by CLSI. CLSI does not estimate latent variables. OLS does of course ignore imprecision in x. 
+#'
+#' @return Numeric vector - residuals
+#'
+#' @examples \dontrun{
+#'   library(fasteqa)
+#'   parameters <- list(n = 20, R = 3, cvx = 0.03, cvy = 0.02, cil = 10, ciu = 15)
+#'   data <- simulate_eqa_data(training_parameters)
+#'   data$SampleID <- as.character(data$SampleID)
+#'   data$ReplicateID <- as.character(data$ReplicateID)
+#'   imprecision <- global_precision_estimates(data)
+#'   mean_of_replicates_data <- fun_of_replicates(data)
+#'   # Extracting raw residuals based on the clsi Deming regression approach
+#'   residuals_eqa(mean_of_replicates_data, imprecision, "clsi", 0)
+#' }
+NULL
+
+residuals_eqa <- function(data, imprecision_estimates, method = "fg", studentize = 1L) {
+    .Call(`_fasteqa_residuals_eqa`, data, imprecision_estimates, method, studentize)
+}
+
 #' Simulation of EQA data based on study design and potential differences in non-selectivity
 #'
 #' @title Simulation of EQA data based on study design and potential differences in non-selectivity
