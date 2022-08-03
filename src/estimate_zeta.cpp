@@ -109,7 +109,7 @@ List estimate_zeta(List data, int silence = 1) {
       }
     }
     
-    // Step-wise check for NA values at vector start and delete if it is a NA-value for MS_A
+    // Step-wise check for NA values at vector start and delete if it is a NA-value for MS_B
     for(int k = 0; k < number_of_matches; ++k){
       if(NA_search_B[k] == 0){
         ith_sample_measurements_B.erase(0);

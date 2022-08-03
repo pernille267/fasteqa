@@ -143,6 +143,9 @@ List predict_eqa(List data, List new_data, List imprecision_estimates, int R = 3
     float b0 = my - b1 * mx;
     float varb1 = (pow(b1, 2) / (n * pow(msxy, 2))) * ((msxx * msyy) - pow(msxy, 2));
     float hvar = R * (msyy + (lambda * msxx) - sub_expression_2) / (2 * lambda);
+    if(hvar < 0.1 * Var_B){
+      hvar = 0.1 * Var_B;
+    }
     float vvar = lambda * hvar;
     float t_quantile = R::qt((1 - level) / 2, n - 2, 0, 0);
     float mu_hat = 0;
