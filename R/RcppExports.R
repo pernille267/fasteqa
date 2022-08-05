@@ -208,7 +208,7 @@ leave_one_out <- function(data, loo_id = 1L) {
     .Call(`_fasteqa_leave_one_out`, data, loo_id)
 }
 
-#' Merge all computations efficiently into one object
+#' Merge all commutability evaluation computations efficiently into one object
 #' 
 #' @title Merge all computations efficiently into one object
 #' @name merge_results
@@ -217,8 +217,8 @@ leave_one_out <- function(data, loo_id = 1L) {
 #' @param zeta_data \code{list} or \code{data table} - Zeta estimates, which must at least contain \code{comparison}, \code{zeta}, \code{lwr}, \code{upr}, \code{zeta_critical}, \code{zeta_conclusion}
 #' @param imprecision_data \code{list} or \code{data table} - global imprecision estimates, which must at least contain \code{comparison}, \code{CV_A}, \code{CV_A_lwr}, \code{CV_A_upr}, \code{CV_B}, \code{CV_B_lwr}, \code{CV_B_upr}, \code{lambda}, \code{lambda_lwr} and \code{lambda_upr}. This one may be omitted, if one is uninterested in viewing the imprecision estimates
 #' @param rounding \code{integer} - How many decimals should be included in the float type variables? The implicit maximum is 6 decimals, meaning that any integer larger than 6 will produce a warning
-#' @param include_imprecision_estimates \code{boolean} - Should imprecision estimates be part of the merged results. Default is \code{FALSE}
-#' @param cv_percent \code{boolean} - Should CVs be given in percent or in standard decimal number. The latter is the default
+#' @param include_imprecision_estimates \code{boolean} - Should imprecision estimates be part of the merged results. Default is \code{FALSE}.
+#' @param silence \code{integer} - Should progress reports be printed? For yes, pass \code{0}. For no, pass \code{1}. \code{1} is default.
 #' 
 #' @description Merge all the essential components (e.g., pb_data, ce_data, zeta_data) of the commutability evaluation analysis into one object, so it will be easier to plot and present commutability evaluation results
 #' 
