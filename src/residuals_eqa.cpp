@@ -21,7 +21,7 @@ using namespace Rcpp;
 //'
 //' @details The practical differences of outcome between the three available methods may be small. \code{fg} estimates latent values, and uses n - 1 degrees of freedom instead of n which is used by CLSI. CLSI does not estimate latent variables. OLS does of course ignore imprecision in x. 
 //'
-//' @return Numeric vector - residuals
+//' @return \code{list} containing two numeric vectors, that are residuals and fitted values
 //'
 //' @examples \dontrun{
 //'   library(fasteqa)
@@ -36,7 +36,7 @@ using namespace Rcpp;
 //' }
 
 // [[Rcpp::export]]
-NumericVector residuals_eqa(List data, List imprecision_estimates, String method = "fg", int studentize = 1) {
+List residuals_eqa(List data, List imprecision_estimates, String method = "fg", int studentize = 1) {
   // Needed global imprecision estimates
   float lambda = imprecision_estimates["lambda"];
   NumericVector MP_A = data["MP_A"];
@@ -80,7 +80,8 @@ NumericVector residuals_eqa(List data, List imprecision_estimates, String method
         r[i] = (r[i] - mr) / sr;
       }
     }
-    return r;
+    List out = List::create(Named("residuals") = r, Named("fitted") = yhat);
+    return out;
   }
   
   else if(method == "clsi"){
@@ -116,7 +117,8 @@ NumericVector residuals_eqa(List data, List imprecision_estimates, String method
         r[i] = (r[i] - mr) / sr;
       }
     }
-    return r;
+    List out = List::create(Named("residuals") = r, Named("fitted") = yhat);
+    return out;
   }
   
   else if(method == "ols"){
@@ -148,7 +150,8 @@ NumericVector residuals_eqa(List data, List imprecision_estimates, String method
         r[i] = (r[i] - mr) / sr;
       }
     }
-    return r;
+    List out = List::create(Named("residuals") = r, Named("fitted") = yhat);
+    return out;
   }
   
   NumericVector x = MP_B;
@@ -179,7 +182,8 @@ NumericVector residuals_eqa(List data, List imprecision_estimates, String method
       r[i] = (r[i] - mr) / sr;
     }
   }
-  return r;
+  List out = List::create(Named("residuals") = r, Named("fitted") = yhat);
+  return out;
 }
 
 

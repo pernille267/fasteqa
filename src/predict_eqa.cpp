@@ -184,7 +184,7 @@ List predict_eqa(List data, List new_data, List imprecision_estimates, int R = 3
           inside[j] = 1;
         }
       }
-      List out = List::create(Named("SampleID") = new_SampleID, Named("MP_B") = new_MP_B, Named("MP_A") = new_MP_A, Named("Prediction") = ny, Named("lwr") = lwr, Named("upr") = upr,  Named("inside") = inside);
+      List out = List::create(Named("SampleID") = new_SampleID, Named("MP_B") = new_MP_B, Named("MP_A") = new_MP_A, Named("prediction") = ny, Named("lwr") = lwr, Named("upr") = upr,  Named("inside") = inside);
       return out;
     }
     else if(MP_A_exists == 1 and MP_B_exists == 1 and SampleID_exists == 0){
@@ -196,7 +196,7 @@ List predict_eqa(List data, List new_data, List imprecision_estimates, int R = 3
         }
         new_SampleID[j] = NA_STRING;
       }
-      List out = List::create(Named("SampleID") = new_SampleID, Named("MP_B") = new_MP_B, Named("MP_A") = new_MP_A, Named("Prediction") = ny, Named("lwr") = lwr, Named("upr") = upr,  Named("inside") = inside);
+      List out = List::create(Named("SampleID") = new_SampleID, Named("MP_B") = new_MP_B, Named("MP_A") = new_MP_A, Named("prediction") = ny, Named("lwr") = lwr, Named("upr") = upr,  Named("inside") = inside);
       return out;
     }
     
@@ -207,7 +207,7 @@ List predict_eqa(List data, List new_data, List imprecision_estimates, int R = 3
         new_SampleID[j] = NA_STRING;
         new_MP_A[j] = NA_REAL;
       }
-      List out = List::create(Named("SampleID") = new_SampleID, Named("MP_B") = new_MP_B, Named("MP_A") = new_MP_A, Named("Prediction") = ny, Named("lwr") = lwr, Named("upr") = upr,  Named("inside") = inside);
+      List out = List::create(Named("SampleID") = new_SampleID, Named("MP_B") = new_MP_B, Named("MP_A") = new_MP_A, Named("prediction") = ny, Named("lwr") = lwr, Named("upr") = upr,  Named("inside") = inside);
       return out;
     }
     
@@ -217,7 +217,7 @@ List predict_eqa(List data, List new_data, List imprecision_estimates, int R = 3
         inside[j] = NA_INTEGER;
         new_MP_A[j] = NA_REAL;
       }
-      List out = List::create(Named("SampleID") = new_SampleID, Named("MP_B") = new_MP_B, Named("MP_A") = new_MP_A, Named("Prediction") = ny, Named("lwr") = lwr, Named("upr") = upr,  Named("inside") = inside);
+      List out = List::create(Named("SampleID") = new_SampleID, Named("MP_B") = new_MP_B, Named("MP_A") = new_MP_A, Named("prediction") = ny, Named("lwr") = lwr, Named("upr") = upr,  Named("inside") = inside);
       return out;
     }
     else{
@@ -282,7 +282,7 @@ List predict_eqa(List data, List new_data, List imprecision_estimates, int R = 3
           inside[j] = 1;
         }
       }
-      List out = List::create(Named("SampleID") = new_SampleID, Named("MP_B") = new_MP_B, Named("MP_A") = new_MP_A, Named("Prediction") = ny, Named("lwr") = lwr, Named("upr") = upr,  Named("inside") = inside);
+      List out = List::create(Named("SampleID") = new_SampleID, Named("MP_B") = new_MP_B, Named("MP_A") = new_MP_A, Named("prediction") = ny, Named("lwr") = lwr, Named("upr") = upr,  Named("inside") = inside);
       return out;
     }
     else if(MP_A_exists == 1 and MP_B_exists == 1 and SampleID_exists == 0){
@@ -294,7 +294,7 @@ List predict_eqa(List data, List new_data, List imprecision_estimates, int R = 3
         }
         new_SampleID[j] = NA_STRING;
       }
-      List out = List::create(Named("SampleID") = new_SampleID, Named("MP_B") = new_MP_B, Named("MP_A") = new_MP_A, Named("Prediction") = ny, Named("lwr") = lwr, Named("upr") = upr,  Named("inside") = inside);
+      List out = List::create(Named("SampleID") = new_SampleID, Named("MP_B") = new_MP_B, Named("MP_A") = new_MP_A, Named("prediction") = ny, Named("lwr") = lwr, Named("upr") = upr,  Named("inside") = inside);
       return out;
     }
     
@@ -305,7 +305,7 @@ List predict_eqa(List data, List new_data, List imprecision_estimates, int R = 3
         new_SampleID[j] = NA_STRING;
         new_MP_A[j] = NA_REAL;
       }
-      List out = List::create(Named("SampleID") = new_SampleID, Named("MP_B") = new_MP_B, Named("MP_A") = new_MP_A, Named("Prediction") = ny, Named("lwr") = lwr, Named("upr") = upr,  Named("inside") = inside);
+      List out = List::create(Named("SampleID") = new_SampleID, Named("MP_B") = new_MP_B, Named("MP_A") = new_MP_A, Named("prediction") = ny, Named("lwr") = lwr, Named("upr") = upr,  Named("inside") = inside);
       return out;
     }
     
@@ -315,7 +315,7 @@ List predict_eqa(List data, List new_data, List imprecision_estimates, int R = 3
         inside[j] = NA_INTEGER;
         new_MP_A[j] = NA_REAL;
       }
-      List out = List::create(Named("SampleID") = new_SampleID, Named("MP_B") = new_MP_B, Named("MP_A") = new_MP_A, Named("Prediction") = ny, Named("lwr") = lwr, Named("upr") = upr,  Named("inside") = inside);
+      List out = List::create(Named("SampleID") = new_SampleID, Named("MP_B") = new_MP_B, Named("MP_A") = new_MP_A, Named("prediction") = ny, Named("lwr") = lwr, Named("upr") = upr,  Named("inside") = inside);
       return out;
     }
     else{
@@ -378,7 +378,7 @@ List predict_eqa(List data, List new_data, List imprecision_estimates, int R = 3
             inside[j] = 1;
           }
         }
-        List out = List::create(Named("SampleID") = new_SampleID, Named("MP_B") = new_MP_B, Named("MP_A") = new_MP_A, Named("Prediction") = ny, Named("lwr") = lwr, Named("upr") = upr,  Named("inside") = inside);
+        List out = List::create(Named("SampleID") = new_SampleID, Named("MP_B") = new_MP_B, Named("MP_A") = new_MP_A, Named("prediction") = ny, Named("lwr") = lwr, Named("upr") = upr,  Named("inside") = inside);
         return out;
       }
       else if(MP_A_exists == 1 and MP_B_exists == 1 and SampleID_exists == 0){
@@ -390,7 +390,7 @@ List predict_eqa(List data, List new_data, List imprecision_estimates, int R = 3
           }
           new_SampleID[j] = NA_STRING;
         }
-        List out = List::create(Named("SampleID") = new_SampleID, Named("MP_B") = new_MP_B, Named("MP_A") = new_MP_A, Named("Prediction") = ny, Named("lwr") = lwr, Named("upr") = upr,  Named("inside") = inside);
+        List out = List::create(Named("SampleID") = new_SampleID, Named("MP_B") = new_MP_B, Named("MP_A") = new_MP_A, Named("prediction") = ny, Named("lwr") = lwr, Named("upr") = upr,  Named("inside") = inside);
         return out;
       }
       else if(MP_A_exists == 0 or MP_B_exists == 0){
@@ -453,7 +453,7 @@ List predict_eqa(List data, List new_data, List imprecision_estimates, int R = 3
             inside[j] = 1;
           }
         }
-        List out = List::create(Named("SampleID") = new_SampleID, Named("MP_B") = new_MP_B, Named("MP_A") = new_MP_A, Named("Prediction") = ny, Named("lwr") = lwr, Named("upr") = upr,  Named("inside") = inside);
+        List out = List::create(Named("SampleID") = new_SampleID, Named("MP_B") = new_MP_B, Named("MP_A") = new_MP_A, Named("prediction") = ny, Named("lwr") = lwr, Named("upr") = upr,  Named("inside") = inside);
         return out;
       }
       else if(MP_A_exists == 1 and MP_B_exists == 1 and SampleID_exists == 0){
@@ -465,7 +465,7 @@ List predict_eqa(List data, List new_data, List imprecision_estimates, int R = 3
           }
           new_SampleID[j] = NA_STRING;
         }
-        List out = List::create(Named("SampleID") = new_SampleID, Named("MP_B") = new_MP_B, Named("MP_A") = new_MP_A, Named("Prediction") = ny, Named("lwr") = lwr, Named("upr") = upr,  Named("inside") = inside);
+        List out = List::create(Named("SampleID") = new_SampleID, Named("MP_B") = new_MP_B, Named("MP_A") = new_MP_A, Named("prediction") = ny, Named("lwr") = lwr, Named("upr") = upr,  Named("inside") = inside);
         return out;
       }
       else if(MP_A_exists == 0 or MP_B_exists == 0){

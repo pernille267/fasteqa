@@ -18,7 +18,7 @@
 \item{studentize}{integer - \code{1} (default) for yes, and \code{0} for no.}
 }
 \value{
-Numeric vector - residuals
+\code{list} containing two numeric vectors, that are residuals and fitted values
 }
 \description{
 A simple function extracting the residuals based on \code{data}

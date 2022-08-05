@@ -90,8 +90,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // merge_results
-List merge_results(List pb_data, List ce_data, List zeta_data, List imprecision_data, int rounding, bool include_imprecision_estimates, bool cv_percent);
-RcppExport SEXP _fasteqa_merge_results(SEXP pb_dataSEXP, SEXP ce_dataSEXP, SEXP zeta_dataSEXP, SEXP imprecision_dataSEXP, SEXP roundingSEXP, SEXP include_imprecision_estimatesSEXP, SEXP cv_percentSEXP) {
+List merge_results(List pb_data, List ce_data, List zeta_data, List imprecision_data, int rounding, bool include_imprecision_estimates, int silence);
+RcppExport SEXP _fasteqa_merge_results(SEXP pb_dataSEXP, SEXP ce_dataSEXP, SEXP zeta_dataSEXP, SEXP imprecision_dataSEXP, SEXP roundingSEXP, SEXP include_imprecision_estimatesSEXP, SEXP silenceSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -101,8 +101,8 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< List >::type imprecision_data(imprecision_dataSEXP);
     Rcpp::traits::input_parameter< int >::type rounding(roundingSEXP);
     Rcpp::traits::input_parameter< bool >::type include_imprecision_estimates(include_imprecision_estimatesSEXP);
-    Rcpp::traits::input_parameter< bool >::type cv_percent(cv_percentSEXP);
-    rcpp_result_gen = Rcpp::wrap(merge_results(pb_data, ce_data, zeta_data, imprecision_data, rounding, include_imprecision_estimates, cv_percent));
+    Rcpp::traits::input_parameter< int >::type silence(silenceSEXP);
+    rcpp_result_gen = Rcpp::wrap(merge_results(pb_data, ce_data, zeta_data, imprecision_data, rounding, include_imprecision_estimates, silence));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -148,7 +148,7 @@ BEGIN_RCPP
 END_RCPP
 }
 // residuals_eqa
-NumericVector residuals_eqa(List data, List imprecision_estimates, String method, int studentize);
+List residuals_eqa(List data, List imprecision_estimates, String method, int studentize);
 RcppExport SEXP _fasteqa_residuals_eqa(SEXP dataSEXP, SEXP imprecision_estimatesSEXP, SEXP methodSEXP, SEXP studentizeSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;

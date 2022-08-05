@@ -27,16 +27,7 @@ using namespace Rcpp;
 //'
 
 // [[Rcpp::export]]
-List merge_results(List pb_data, List ce_data, List zeta_data, List imprecision_data, int rounding = 3, bool include_imprecision_estimates = true, bool cv_percent = false){
-  
-  float cv_factor = 0;
-  
-  if(cv_percent){
-    cv_factor = 100;
-  }
-  else{
-    cv_factor = 1;
-  }
+List merge_results(List pb_data, List ce_data, List zeta_data, List imprecision_data, int rounding = 3, bool include_imprecision_estimates = true, int silence = 1){
   
   // pb_data as reference
   CharacterVector comparison = pb_data["comparison"];
@@ -45,21 +36,27 @@ List merge_results(List pb_data, List ce_data, List zeta_data, List imprecision_
   CharacterVector unique_comparisons = sort_unique(comparison);
   int n = unique_comparisons.size();
   int N = comparison.size();
-  // Rcout << "Number of unique comparisons:  " << n << "\n"; 
-  // Rcout << "Number of rows:  " << N << "\n"; 
+  if(silence == 0){
+    Rcout << "Progress report 1..." << "\n";
+    Rcout << "Number of unique comparisons:  " << n << "\n"; 
+    Rcout << "Number of rows:  " << N << "\n";
+    Rcout << "__________________________________________________________________" << "\n";
+  }
   IntegerVector n_comparison(n);
   IntegerVector pb_new_indices(N);
-  // Count replicates of each unique comparison (Part 1 / *)
-  int c = 1;
-  int j = 0;
+  // Count absolute frequency of each unique comparison (Part 1 / *)
+  int c = 1; // within comparison counter
+  int j = 0; // unique comparison counter
   for(int i = 0; i < N; ++i){
-    if(i == (N-1)){
+    if(i == (N - 1)){
       n_comparison[j] = c;
       break;
     }
+    
     if(comparison_sorted[i] == comparison_sorted[i + 1]){
       ++c;
     }
+    
     else if(comparison_sorted[i] != comparison_sorted[i + 1]){
       n_comparison[j] = c;
       c = 1;
@@ -67,7 +64,11 @@ List merge_results(List pb_data, List ce_data, List zeta_data, List imprecision_
     }
   }
   
-  // Rcout << "n_comparison is : " << n_comparison << "\n";
+  if(silence == 0){
+    Rcout << "Progress report 2..." << "\n";
+    Rcout << "There are " << n_comparison << " unique comparisons in input data" << "\n";  
+    Rcout << "__________________________________________________________________" << "\n";
+  }
   
   // Reset counter
   c = 0;
@@ -79,7 +80,7 @@ List merge_results(List pb_data, List ce_data, List zeta_data, List imprecision_
     LogicalVector matches = in(comparison, to_match);
     int n_matches = sum(matches);
     IntegerVector sub_indices(n_matches);
-    int d = 0;
+    int d = 0; // match counter
     for(int j = 0; j < N; ++j){
       if(matches[j] == 1){
         sub_indices[d] = j;
@@ -95,10 +96,20 @@ List merge_results(List pb_data, List ce_data, List zeta_data, List imprecision_
       pb_new_indices[c] = sub_indices[j];
       ++c;
     }
-    // Rcout << "to_match: " << to_match << "\n";
-    // Rcout << "matches for " << to_match << " in original comparison: " << matches << "\n"; 
+    
+    if(silence == 0){
+      Rcout << "Progress report 3..." << "\n";
+      Rcout << "We are matching: " << to_match << "\n";
+      Rcout << "Matches for " << to_match << " in original comparison: " << matches << "\n";
+      Rcout << "__________________________________________________________________" << "\n";
+    }
+    
   }
-  // Rcout << "pb_new_indices are " << ": "<< pb_new_indices << "\n"; 
+  if(silence == 0){
+    Rcout << "Progress report 4..." << "\n";
+    Rcout << "pb_new_indices are " << ": "<< pb_new_indices << "\n";
+    Rcout << "__________________________________________________________________" << "\n";
+  }
   
   NumericVector predictor = pb_data["predictor"];
   NumericVector prediction = pb_data["prediction"];
@@ -133,8 +144,8 @@ List merge_results(List pb_data, List ce_data, List zeta_data, List imprecision_
   }
   
   // Reset the two counters
-  c = 1;
-  j = 0;
+  c = 1; // within counter for comparison
+  j = 0; // number of comparisons counter
   
   for(int i = 0; i < M; ++i){
     if(i == (M - 1)){
@@ -151,8 +162,14 @@ List merge_results(List pb_data, List ce_data, List zeta_data, List imprecision_
     }
   }
   
+  // reset counter
   c = 0;
-  Rcout << "m_comparison is : " << m_comparison << "\n";
+  if(silence == 0){
+    Rcout << "Progress report 5..." << "\n";
+    Rcout << "m_comparison is : " << m_comparison << "\n";
+    Rcout << "__________________________________________________________________" << "\n";
+  }
+  
   
   for(int i = 0; i < m; ++i){
     CharacterVector to_match(1);
@@ -167,17 +184,28 @@ List merge_results(List pb_data, List ce_data, List zeta_data, List imprecision_
         ++d;  
       }
     }
+    
     if(m_matches != m_comparison[i]){
       stop("m_matches is different from m_comparison. Something is wrong...");
     }
+    
     for(int j = 0; j < m_comparison[i]; ++j){
       ce_new_indices[c] = sub_indices[j];
       ++c;
     }
-    //Rcout << "to_match: " << to_match << "\n";
-    //Rcout << "matches for " << to_match << " in original comparison: " << matches << "\n"; 
+    
+    if(silence == 0){
+      Rcout << "Progress report 6..." << "\n";
+      Rcout << "We are matching: " << to_match << "\n";
+      Rcout << "Matches for " << to_match << " in original comparison: " << matches << "\n";
+      Rcout << "__________________________________________________________________" << "\n";
+    }
   }
-  // Rcout << "pb_new_indices are " << ": "<< pb_new_indices << "\n"; 
+  if(silence == 0){
+    Rcout << "Progress report 7..." << "\n";
+    Rcout << "ce_new_indices are " << ": "<< ce_new_indices << "\n";
+    Rcout << "__________________________________________________________________" << "\n";
+  }
   
   CharacterVector SampleID = ce_data["SampleID"];
   NumericVector MS_A = ce_data["MP_A"];
@@ -187,8 +215,13 @@ List merge_results(List pb_data, List ce_data, List zeta_data, List imprecision_
   NumericVector ce_upr = ce_data["upr"];
   IntegerVector ce_inside = ce_data["inside"];
   
-  Rcout << "SampleID: " << SampleID << "\n";
+  if(silence == 0){
+    Rcout << "Progress report 8..." << "\n";
+    Rcout << "SampleIDs of ce_data: " << SampleID << "\n";
+    Rcout << "__________________________________________________________________" << "\n";
+  }
   
+  // New ordering after ordering of 'comparison'
   CharacterVector new_SampleID(M);
   NumericVector new_MS_A(M);
   NumericVector new_MS_B(M);
@@ -196,8 +229,6 @@ List merge_results(List pb_data, List ce_data, List zeta_data, List imprecision_
   NumericVector new_ce_lwr(M);
   NumericVector new_ce_upr(M);
   IntegerVector new_ce_inside(M);
-  
-  Rcout << "ce_new_indices: " << ce_new_indices << "\n";
   
   // Update whole data based on sorting of comparison
   for(int i = 0; i < M; ++i){
@@ -210,8 +241,10 @@ List merge_results(List pb_data, List ce_data, List zeta_data, List imprecision_
     new_ce_inside[i] = ce_inside[ce_new_indices[i]];
   }
   
+  //////////////////////////////////////////////
+  // Expand zeta_data with respect to pb_data //
+  //////////////////////////////////////////////
   
-  // Expand zeta_data with respect to pb_data
   CharacterVector comparison_zeta = zeta_data["comparison"];
   CharacterVector copy_comparison_zeta = clone(comparison_zeta);
   CharacterVector comparison_zeta_sorted = copy_comparison_zeta.sort();
@@ -278,9 +311,9 @@ List merge_results(List pb_data, List ce_data, List zeta_data, List imprecision_
     }  
   }
   
-  //////////////////////////
-  // expand zeta data for ce
-  //////////////////////////
+  //////////////////////////////////
+  // expand zeta_data for ce_data //
+  //////////////////////////////////
   
   // Expand zeta_data with respect to ce_data
   IntegerVector ce_new_indices_zeta(m);
@@ -334,13 +367,6 @@ List merge_results(List pb_data, List ce_data, List zeta_data, List imprecision_
   
   
   if(include_imprecision_estimates == true){
-    //Rcout << "-------------------------------------------------------------------------------------" << "\n";
-    //Rcout << "New indices based on sorted comparisons are : " << pb_new_indices_imprecision << "\n";
-    //Rcout << "Original order of comparisons are : " <<  "\n";
-    //Rcout << "## "<< comparison_imprecision << "\n";
-    //Rcout << "Sorted order of comparisons are :" << "\n";
-    //Rcout << "## "<< comparison_imprecision_sorted << "\n";
-    //Rcout << "-------------------------------------------------------------------------------------" << "\n";
     
     // Expand imprecision_data for PB data
     
@@ -352,6 +378,7 @@ List merge_results(List pb_data, List ce_data, List zeta_data, List imprecision_
       stop("Each comparison must correspond to exactly one row of imprecision estimates. This is not the case, so calculations are terminated");
     }
     
+    
     // reordering of other variables based on order of comparison
     for(int i = 0; i < n; ++i){
       CharacterVector to_match(1);
@@ -362,6 +389,16 @@ List merge_results(List pb_data, List ce_data, List zeta_data, List imprecision_
           pb_new_indices_imprecision[i] = j;
         } 
       }
+    }
+    
+    if(silence == 0){
+      Rcout << "Progress report 9..." << "\n";
+      Rcout << "New indices based on sorted comparisons are : " << pb_new_indices_imprecision << "\n";
+      Rcout << "Original order of comparisons are : " <<  "\n";
+      Rcout << "---> " << comparison_imprecision << "\n";
+      Rcout << "Sorted order of comparisons are :" << "\n";
+      Rcout << "---> "<< comparison_imprecision_sorted << "\n";
+      Rcout << "__________________________________________________________________" << "\n";  
     }
     
     // Get data from input list
@@ -399,11 +436,21 @@ List merge_results(List pb_data, List ce_data, List zeta_data, List imprecision_
       new_order_lambda_upr[i] = lambda_upr[pb_new_indices_imprecision[i]];  
     }
     
-    // Rcout << "CV_A unordered: " << CV_A << "\n";
-    // Rcout << "CV_A ordered: " << new_order_CV_A << "\n";
-    // Rcout << "n_comparison: " << n_comparison << "\n";
+    if(silence == 0){
+      Rcout << "Progress report 10..." << "\n";
+      Rcout << "CV_A unordered: " << CV_A << "\n";
+      Rcout << "CV_A ordered: " << new_order_CV_A << "\n";
+      Rcout << "CV_B unordered: " << CV_B << "\n";
+      Rcout << "CV_B ordered: " << new_order_CV_B << "\n";
+      Rcout << "lambda unordered: " << lambda << "\n";
+      Rcout << "lambda ordered: " << new_order_lambda << "\n";
+      Rcout << "__________________________________________________________________" << "\n";  
+    }
     
-    // expansion from n to N
+    ////////////////////////////////////////////////////
+    // expansion of imprecision_data based on pb_data //
+    ////////////////////////////////////////////////////
+    
     CharacterVector new_comparison_imprecision(N);
     NumericVector new_CV_A(N);
     NumericVector new_CV_A_lwr(N);
@@ -435,10 +482,16 @@ List merge_results(List pb_data, List ce_data, List zeta_data, List imprecision_
       }
     }
     
-    Rcout << "lambda:" << "\n";
-    Rcout << "## " << new_lambda << "\n"; 
+    if(silence == 0){
+      Rcout << "Progress report 10..." << "\n";
+      Rcout << "lambda values with old order : " << lambda <<"\n";
+      Rcout << "lambda values with new order : " << new_lambda << "\n";   
+      Rcout << "__________________________________________________________________" << "\n";
+    }
     
-    // Expand imprecision_data for CE data
+    /////////////////////////////////////////
+    // Expand imprecision_data for ce_data //
+    /////////////////////////////////////////
     
     IntegerVector ce_new_indices_imprecision(m);
     if(m != comparison_imprecision_sorted.size()){
@@ -539,12 +592,12 @@ List merge_results(List pb_data, List ce_data, List zeta_data, List imprecision_
                               Named("pi_lwr") = round(new_ce_lwr, rounding),
                               Named("pi_upr") = round(new_ce_upr, rounding),
                               Named("pi_inside") = new_ce_inside,
-                              Named("CV_A") = round(cv_factor * ce_new_CV_A, rounding),
-                              Named("CV_A_lwr") = round(cv_factor * ce_new_CV_A_lwr, rounding),
-                              Named("CV_A_upr") = round(cv_factor * ce_new_CV_A_upr, rounding),
-                              Named("CV_B") = round(cv_factor * CV_B, rounding),
-                              Named("CV_B_lwr") = round(cv_factor * ce_new_CV_B_lwr, rounding),
-                              Named("CV_B_upr") = round(cv_factor * ce_new_CV_B_upr, rounding),
+                              Named("CV_A") = round(ce_new_CV_A, rounding),
+                              Named("CV_A_lwr") = round(ce_new_CV_A_lwr, rounding),
+                              Named("CV_A_upr") = round(ce_new_CV_A_upr, rounding),
+                              Named("CV_B") = round(CV_B, rounding),
+                              Named("CV_B_lwr") = round(ce_new_CV_B_lwr, rounding),
+                              Named("CV_B_upr") = round(ce_new_CV_B_upr, rounding),
                               Named("lambda") = round(ce_new_lambda, rounding));
     
     List out = List::create(Named("merged_pb_data") = out_1, Named("merged_ce_data") = out_2);

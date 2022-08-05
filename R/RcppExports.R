@@ -234,8 +234,8 @@ leave_one_out <- function(data, loo_id = 1L) {
 #'
 NULL
 
-merge_results <- function(pb_data, ce_data, zeta_data, imprecision_data, rounding = 3L, include_imprecision_estimates = TRUE, cv_percent = FALSE) {
-    .Call(`_fasteqa_merge_results`, pb_data, ce_data, zeta_data, imprecision_data, rounding, include_imprecision_estimates, cv_percent)
+merge_results <- function(pb_data, ce_data, zeta_data, imprecision_data, rounding = 3L, include_imprecision_estimates = TRUE, silence = 1L) {
+    .Call(`_fasteqa_merge_results`, pb_data, ce_data, zeta_data, imprecision_data, rounding, include_imprecision_estimates, silence)
 }
 
 #' Estimate prediction intervals for EQA data with Deming or OLS
@@ -365,7 +365,7 @@ resample_samples <- function(data, silence = 1L) {
 #'
 #' @details The practical differences of outcome between the three available methods may be small. \code{fg} estimates latent values, and uses n - 1 degrees of freedom instead of n which is used by CLSI. CLSI does not estimate latent variables. OLS does of course ignore imprecision in x. 
 #'
-#' @return Numeric vector - residuals
+#' @return \code{list} containing two numeric vectors, that are residuals and fitted values
 #'
 #' @examples \dontrun{
 #'   library(fasteqa)
