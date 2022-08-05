@@ -612,7 +612,7 @@ List merge_results(List pb_data, List ce_data, List zeta_data, List imprecision_
                             Named("zeta_upper") = round(new_zeta_crit, rounding),
                             Named("dins_conclusion") = new_zeta_conc,
                             Named("predictor") = round(new_predictor, rounding),
-                            Named("prediction") = round(new_predictor, rounding),
+                            Named("prediction") = round(new_prediction, rounding),
                             Named("pi_lwr") = round(new_lwr, rounding),
                             Named("pi_upr") = round(new_upr, rounding));
   
