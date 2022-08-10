@@ -146,10 +146,10 @@ List simulate_eqa_data(List parameters, int silence = 1){
   }
   else{
     float u = R::runif(0,1);
-    if(u < 0.25){
+    if(u < 0.10){
       R += 2;
     }
-    else if(u < 0.90){
+    else if(u < 0.95){
       R += 3; 
     }
     else{
@@ -175,16 +175,7 @@ List simulate_eqa_data(List parameters, int silence = 1){
     cil += reg_cil;
   }
   else{
-    float u = R::runif(0,1);
-    if(u < 1/3){
-      cil = R::runif(1,5);
-    }
-    else if(u < 5/6){
-      cil = R::runif(10,100); 
-    }
-    else{
-      cil = R::runif(200,400);
-    }
+    cil += R::rf(1.057057, 8.15) * 44;
   }
   if(ciu_exists == 1){
     float reg_ciu = parameters["ciu"];
@@ -192,7 +183,8 @@ List simulate_eqa_data(List parameters, int silence = 1){
   }
   else{
     if(cil > 0){
-      ciu += cil + cil * R::runif(0.5, 3);
+      float multiplier = R::rbeta(0.78, 11) * 44;
+      ciu += cil + cil * multiplier;
     }
     else{
       stop("cil is negative or zero. This should not be possible! Check if something is wrong");
