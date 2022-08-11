@@ -397,10 +397,14 @@ residuals_eqa <- function(data, imprecision_estimates, method = "fg", studentize
 #'   \item{\code{cvy: }}{The analytical CV of y measurements}
 #'   \item{\code{cil: }}{The lower range of the concentration interval}
 #'   \item{\code{ciu: }}{The upper range of the concentration interval}
+#'   \item{\code{eta: }}{The heteroscedasticity factor}
+#'   \item{\code{eta0: }}{The proportion of base MS standard deviations}
 #'   \item{\code{qpos: }}{Position of systematic differences in non-selectivity. 0 signify lower range and 1 signify upper range}
 #'   \item{\code{qran: }}{Interquantile range where systematic differences in non-selectivity should have its effect}
 #'   \item{\code{prop: }}{average proportion of clinical samples affected by random differences in non-selectivity}
 #'   \item{\code{mmax: }}{The maximum relocation magnitude in number of analytical SDs of y measurements. This assumes either prop or qpos and qran to be specified as well}
+#'   \item{\code{b0: }}{For systematic linear differences in non-selectivity. Intercept}
+#'   \item{\code{b1: }}{For systematic linear differences in non-selectivity. Slope}
 #' }
 #' @param silence \code{Integer} should temporary calculation results be printed? This may be useful for debugging or strange curiosity. \code{silence = 1} signify that printing will be suppressed, which is the default. \code{silence = 0} allows such printing 
 #' 
