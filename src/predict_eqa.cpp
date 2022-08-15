@@ -476,7 +476,7 @@ List predict_eqa(List data, List new_data, List imprecision_estimates, int R = 3
       }
     }
   }
-  List out = List::create(Named("NA") = 1);
+  List out = List::create(Named("output") = NA_STRING);
   return out;
 }
   

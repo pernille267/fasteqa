@@ -101,6 +101,35 @@ estimate_zeta <- function(data, silence = 1L) {
     .Call(`_fasteqa_estimate_zeta`, data, silence)
 }
 
+#' Estimate differences in non-selectivity with zeta using Deming regression
+#' 
+#' @title Estimate differences in non-selectivity with zeta using Deming regression
+#' @name estimate_zeta_deming
+#' @param data \code{list} or \code{data table} - Data with elements/columns \code{SampleID}, \code{ReplicateID}, \code{MP_A} and \code{MP_B}
+#' @param silence \code{integer} - How much progress reports should be returned. Note that returning progress reports will slow down the performance drastically. There are three valid inputs:
+#' \itemize{
+#'   \item{\code{1: }}{All progress reports are silenced and is the default}
+#'   \item{\code{0: }}{Some progress reports are delivered, but debugging reports are suppressed}
+#'   \item{\code{-1: }}{All prorgress reports are delivered}
+#' }
+#' 
+#' @description Estimate the degree of differences in non-selectivity with zeta. Zeta is is the ratio of the pooled average prediction error variance and the sum of analytical variances.  
+#' 
+#' @details Differences in non-selectivity between measurement systems may cause problems in e.g., evaluation of commutability. A large value of zeta indicates that we have have large differences in non-selectivity between compared measurement systems. An upper limit of acceptable zeta may be determined based on the allowable increase in prediction interval width and analyte of relevance
+#' 
+#' @return A list with the point estimate of zeta. The zeta value is a float value, meaning that the precision is 1e-6 (six decimals precision).
+#'
+#' @examples \dontrun{
+#'   library(fasteqa)
+#'   data <- simulate_data_eqa(list(n = 25, R = 3, qran = 0.20, qpos = 1, mmax = 8))
+#'   estimate_zeta_deming(data)
+#' }
+NULL
+
+estimate_zeta_deming <- function(data, silence = 1L) {
+    .Call(`_fasteqa_estimate_zeta_deming`, data, silence)
+}
+
 #' Apply a mathematical summary function on every SampleID
 #' 
 #' @title Apply a mathematical summary function on every SampleID
