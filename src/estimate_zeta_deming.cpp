@@ -62,16 +62,22 @@ List estimate_zeta_deming(List data, int silence = 1) {
     NumericVector ith_sample_measurements_B(number_of_matches);
     
     // Checks for NA-values
-    // If R_IsNA results in 1 (i.e., NA-value) let the kth measurement be zero
+    // If ISNAN results in 1 (i.e., NA-value) let the kth measurement be zero
     // Otherwise, the kth measurement will be the kth measurement of MS_A / MS_B
     for(int k = 0; k < number_of_matches; ++k){
-      int na_check_A = R_IsNA(MS_A[indices[k]]);
-      if(na_check_A == 0){
+      bool is_na_MS_A = ISNAN(MS_A[indices[k]]);
+      bool is_na_MS_B = ISNAN(MS_B[indices[k]]);
+      if(!is_na_MS_A){
         ith_sample_measurements_A[k] = MS_A[indices[k]];
       }
-      int na_check_B = R_IsNA(MS_B[indices[k]]);
-      if(na_check_B == 0){
+      else if(is_na_MS_A){
+        ith_sample_measurements_A[k] = 0;
+      }
+      if(!is_na_MS_B){
         ith_sample_measurements_B[k] = MS_B[indices[k]];  
+      }
+      else if(is_na_MS_B){
+        ith_sample_measurements_B[k] = 0;
       }
     }
     
@@ -82,17 +88,23 @@ List estimate_zeta_deming(List data, int silence = 1) {
     // recall: ith_sample_measurements_*[k] = 0 signify that the value is a NA-value
     // NA_search_* will return 0 if ith_sample_measurements_*[k] = 0, and 1 otherwise 
     for(int k = 0; k < number_of_matches; ++k){
-      if(ith_sample_measurements_A[k] <= 0){
+      if(ith_sample_measurements_A[k] == 0){
         NA_search_A[k] = 0;
       }
-      if(ith_sample_measurements_A[k] > 0){
+      else if(ith_sample_measurements_A[k] > 0){
         NA_search_A[k] = 1;
       }
-      if(ith_sample_measurements_B[k] <= 0){
+      else if(ith_sample_measurements_A[k] < 0){
+        NA_search_A[k] = 0;
+      }
+      if(ith_sample_measurements_B[k] == 0){
         NA_search_B[k] = 0;
       }
-      if(ith_sample_measurements_B[k] > 0){
+      else if(ith_sample_measurements_B[k] > 0){
         NA_search_B[k] = 1;
+      }
+      else if(ith_sample_measurements_B[k] < 0){
+        NA_search_B[k] = 0;
       }
     }
     
@@ -142,60 +154,60 @@ List estimate_zeta_deming(List data, int silence = 1) {
   float var_MS_B = 0;
   
   for(int j = 0; j < n; ++j){
-    int na_check_A = ISNAN(ith_var_MS_A[j]);
-    int na_check_B = ISNAN(ith_var_MS_B[j]);
-    if(na_check_A <= 0){
+    bool is_na_var_A_j = ISNAN(ith_var_MS_A[j]);
+    bool is_na_var_B_j = ISNAN(ith_var_MS_B[j]);
+    if(!is_na_var_A_j){
       var_MS_A += ith_var_MS_A[j];
     }
-    if(na_check_A > 0){
+    else if(is_na_var_A_j){
       effective_n_A = effective_n_A - 1;
     }
-    if(na_check_B <= 0){
+    if(!is_na_var_B_j){
       var_MS_B += ith_var_MS_B[j];
     }
-    if(na_check_B > 0){
+    else if(is_na_var_B_j){
       effective_n_B = effective_n_B - 1;
     }
   }
   
-  if(effective_n_A > 0){
+  if(effective_n_A >= 1){
     var_MS_A = var_MS_A / effective_n_A; 
   }
-  if(effective_n_A <= 0){
+  if(effective_n_A < 1){
     var_MS_A = NA_REAL;
   }
-  if(effective_n_B > 0){
+  if(effective_n_B >= 1){
     var_MS_B = var_MS_B / effective_n_B;
   }
-  if(effective_n_B <= 0){
+  if(effective_n_B < 1){
     var_MS_B = NA_REAL;
   }
   float lambda = 0;
-  int na_check_A = ISNAN(var_MS_A);
-  int na_check_B = ISNAN(var_MS_B);
-  if(na_check_A <= 0 and na_check_B <= 0){
+  bool is_na_pooled_var_A = ISNAN(var_MS_A);
+  bool is_na_pooled_var_B = ISNAN(var_MS_B);
+  if(is_na_pooled_var_A | is_na_pooled_var_B){
+    List out = List::create(Named("zeta") = NA_REAL);
+    return out;
+  }
+  else if((!is_na_pooled_var_A) & (!is_na_pooled_var_B)){
     lambda = var_MS_A / var_MS_B;  
   }
-  if(na_check_A > 0 or na_check_B > 0){
-    lambda = NA_REAL;
-  }
-  
   float mean_MS_A = 0;
   float mean_MS_B = 0;
   
   for(int i = 0; i < N; ++i){
-    int na_check_A = ISNAN(MS_A[i]);
-    int na_check_B = ISNAN(MS_B[i]);
-    if(na_check_A <= 0){
+    bool is_na_mean_A = ISNAN(MS_A[i]);
+    bool is_na_mean_B = ISNAN(MS_B[i]);
+    if(!is_na_mean_A){
       mean_MS_A += MS_A[i];
     }
-    if(na_check_A > 0){
+    else if(is_na_mean_A){
       effective_N_A = effective_N_A - 1;
     }
-    if(na_check_B <= 0){
+    if(!is_na_mean_B){
       mean_MS_B += MS_B[i];
     }
-    if(na_check_B > 0){
+    else if(is_na_mean_B){
       effective_N_B = effective_N_B - 1;
     }
   }
@@ -225,22 +237,34 @@ List estimate_zeta_deming(List data, int silence = 1) {
   
   NumericVector x = MS_B;
   NumericVector y = MS_A;
-  float mx = mean(x);
-  float my = mean(y);
-  float msxx = var(x);
-  float msyy = var(y);
+  float mx = mean_MS_B;
+  float my = mean_MS_A;
+  
+  float msxx = 0;
+  float msyy = 0;
   float msxy = 0;
+  
   for(int i = 0; i < N; ++i){
-    msxy = msxy + (x[i] - mx) * (y[i] - my);
+    bool na_check_x = ISNAN(x[i]);
+    bool na_check_y = ISNAN(y[i]);
+    if((!na_check_x) & (!na_check_y)){
+      msxx = msxx + pow(x[i] - mx, 2);
+      msyy = msyy + pow(y[i] - my, 2);
+      msxy = msxy + (x[i] - mx) * (y[i] - my);
+    }
   }
-  msxy = msxy / (N - 1);
+  
+  msxx = msxx / (effective_N_B - 1);
+  msyy = msyy / (effective_N_A - 1);
+  msxy = msxy / (effective_N_A - 1);
+  
   float sub_expression_1 = msyy - lambda * msxx;
   float sub_expression_2 = sqrt(pow(msyy - lambda * msxx, 2) + 4 * lambda * pow(msxy, 2));
   float sub_expression_3 = 2 * msxy;
   float b1 = (sub_expression_1 + sub_expression_2) / sub_expression_3;
-  float varb1 = (pow(b1, 2) / (N * pow(msxy, 2))) * ((msxx * msyy) - pow(msxy, 2));
+  float varb1 = (pow(b1, 2) / ((effective_N_A) * pow(msxy, 2))) * ((msxx * msyy) - pow(msxy, 2));
   float hvar = (msyy + (lambda * msxx) - sub_expression_2) / (2 * lambda);
-  float varpar = varb1 * msxx + varb1 * hvar + (1 + 1 / N) * (pow(b1, 2) + lambda) * hvar;
+  float varpar = varb1 * msxx + varb1 * hvar + (1 + 1 / effective_N_A) * (pow(b1, 2) + lambda) * hvar;
   float zeta = varpar / (var_MS_A + var_MS_B * pow(b1, 2));
   
   if(silence == 0 or silence == -1){

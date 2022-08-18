@@ -208,6 +208,15 @@ List simulate_eqa_data(List parameters, int silence = 1){
   }
   else{
     cil += R::rf(1.057057, 8.15) * 44;
+    if(cil < 0.01){
+      cil += R::rf(1.057057, 8.15) * 44;
+      if(cil < 0.01){
+        cil += R::rf(1.057057, 8.15) * 44;
+        if(cil < 0.01){
+          cil += R::rf(1.057057, 8.15) * 44;
+        }
+      }
+    }
   }
   if(ciu_exists == 1){
     float reg_ciu = parameters["ciu"];
@@ -348,7 +357,7 @@ List simulate_eqa_data(List parameters, int silence = 1){
     
     if(silence == 0){
       Rcout << "sdx for i = " << i << " is " << sdx << "\n";
-      //Rcout << "sdy for i = " << i << " is " << sdy << "\n";  
+      Rcout << "sdy for i = " << i << " is " << sdy << "\n";  
     }
     
     
@@ -402,10 +411,16 @@ List simulate_eqa_data(List parameters, int silence = 1){
       ReplicateID[idx[r]] = r + 1;
       MP_A[idx[r]] = tau[i] + R::rnorm(0, sdy) + relocate_sample_i * relocating_magnitude * sdy;
       MP_B[idx[r]] = b0 + tau[i] * b1 + R::rnorm(0, sdx);
+      if(MP_A[idx[r]] < 0){
+        MP_A[idx[r]] = MP_A[idx[r]] * (-1);
+      }
+      if(MP_B[idx[r]] < 0){
+        MP_B[idx[r]] = MP_B[idx[r]] * (-1);
+      }
     }
   }
   
-  List out = List::create(Named("SampleID") = SampleID, Named("ReplicateID") = ReplicateID, Named("MP_A") = round(MP_A, 3), Named("MP_B") = round(MP_B, 3));
+  List out = List::create(Named("SampleID") = SampleID, Named("ReplicateID") = ReplicateID, Named("MP_A") = round(MP_A, 6), Named("MP_B") = round(MP_B, 6));
   return out;
 }
 

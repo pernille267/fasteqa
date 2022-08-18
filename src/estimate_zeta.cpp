@@ -62,16 +62,22 @@ List estimate_zeta(List data, int silence = 1) {
     NumericVector ith_sample_measurements_B(number_of_matches);
     
     // Checks for NA-values
-    // If R_IsNA results in 1 (i.e., NA-value) let the kth measurement be zero
-    // Otherwise, the kth measurement will be the kth measurement of MS_A / MS_B
+    // If ISNAN results in TRUE (i.e., NA-value) let the kth measurement be zero
+    // Otherwise, the kth measurement will be the kth measurement of the corresponding MS_A or MS_B
     for(int k = 0; k < number_of_matches; ++k){
-      int na_check_A = R_IsNA(MS_A[indices[k]]);
-      if(na_check_A == 0){
+      bool is_na_A = ISNAN(MS_A[indices[k]]);
+      bool is_na_B = ISNAN(MS_B[indices[k]]);
+      if(!is_na_A){
         ith_sample_measurements_A[k] = MS_A[indices[k]];
       }
-      int na_check_B = R_IsNA(MS_B[indices[k]]);
-      if(na_check_B == 0){
+      else{
+        ith_sample_measurements_A[k] = 0;
+      }
+      if(!is_na_B){
         ith_sample_measurements_B[k] = MS_B[indices[k]];  
+      }
+      else{
+        ith_sample_measurements_B[k] = 0;
       }
     }
     
@@ -79,28 +85,40 @@ List estimate_zeta(List data, int silence = 1) {
     IntegerVector NA_search_A(number_of_matches);
     IntegerVector NA_search_B(number_of_matches);
     
-    // recall: ith_sample_measurements_*[k] = 0 signify that the value is a NA-value
+    // Recall: ith_sample_measurements_*[k] = 0 signify that the value is a NA-value
     // NA_search_* will return 0 if ith_sample_measurements_*[k] = 0, and 1 otherwise 
     for(int k = 0; k < number_of_matches; ++k){
-      if(ith_sample_measurements_A[k] <= 0){
+      if(ith_sample_measurements_A[k] == 0){
         NA_search_A[k] = 0;
       }
       if(ith_sample_measurements_A[k] > 0){
         NA_search_A[k] = 1;
       }
-      if(ith_sample_measurements_B[k] <= 0){
+      if(ith_sample_measurements_B[k] == 0){
         NA_search_B[k] = 0;
       }
       if(ith_sample_measurements_B[k] > 0){
         NA_search_B[k] = 1;
       }
+      if((ith_sample_measurements_A[k] < 0) | (ith_sample_measurements_B[k] < 0)){
+        if((ith_sample_measurements_A[k] < 0) & (silence == -2)){
+          Rcout << "SampleID " << i << " and replicate measurement " << k << " is registered as a negative values: "<< ith_sample_measurements_A[k] << "\n";  
+        }
+        if((ith_sample_measurements_B[k] < 0) & (silence == -2)){
+          Rcout << "SampleID " << i << " and replicate measurement " << k << " is registered as a negative values: "<< ith_sample_measurements_B[k] << "\n";  
+        }
+        stop("Negative measurements are recorded");
+      }
     }
     
-    // Aligning vectors making it easier to delete NA-values
+    // Aligning vectors NA search vectors and measurement vectors making it easier to delete NA-values
     ith_sample_measurements_A = ith_sample_measurements_A.sort();
     ith_sample_measurements_B = ith_sample_measurements_B.sort();
     NA_search_A = NA_search_A.sort();
     NA_search_B = NA_search_B.sort();
+    
+    // Rcout << "ith sample measurement for A: " << ith_sample_measurements_A << "\n";
+    // Rcout << "ith NA values: " << NA_search_A << "\n";
     
     // Step-wise check for NA values at vector start and delete if it is a NA-value for MS_A
     for(int k = 0; k < number_of_matches; ++k){
@@ -133,7 +151,6 @@ List estimate_zeta(List data, int silence = 1) {
     ++c;
   }
   
-  
   int effective_N_A = N;
   int effective_n_A = n;
   int effective_N_B = N;
@@ -142,60 +159,66 @@ List estimate_zeta(List data, int silence = 1) {
   float var_MS_B = 0;
   
   for(int j = 0; j < n; ++j){
-    int na_check_A = ISNAN(ith_var_MS_A[j]);
-    int na_check_B = ISNAN(ith_var_MS_B[j]);
-    if(na_check_A <= 0){
+    bool is_na_var_A = ISNAN(ith_var_MS_A[j]);
+    bool is_na_var_B = ISNAN(ith_var_MS_B[j]);
+    if(!is_na_var_A){
       var_MS_A += ith_var_MS_A[j];
     }
-    if(na_check_A > 0){
+    if(is_na_var_A){
       effective_n_A = effective_n_A - 1;
     }
-    if(na_check_B <= 0){
+    if(!is_na_var_B){
       var_MS_B += ith_var_MS_B[j];
     }
-    if(na_check_B > 0){
+    if(is_na_var_A){
       effective_n_B = effective_n_B - 1;
     }
   }
   
-  if(effective_n_A > 0){
+  if(effective_n_A >= 1){
     var_MS_A = var_MS_A / effective_n_A; 
   }
-  if(effective_n_A <= 0){
+  else if(effective_n_A < 1){
+    if(silence == -2){
+      Rcout << "effective sample size for MS_A was smaller than 1..." << "\n";
+    }
     var_MS_A = NA_REAL;
   }
-  if(effective_n_B > 0){
+  if(effective_n_B >= 1){
     var_MS_B = var_MS_B / effective_n_B;
   }
-  if(effective_n_B <= 0){
+  else if(effective_n_B < 1){
+    if(silence == -2){
+      Rcout << "effective sample size for MS_B was smaller than 1..." << "\n";
+    }
     var_MS_B = NA_REAL;
   }
   float lambda = 0;
-  int na_check_A = ISNAN(var_MS_A);
-  int na_check_B = ISNAN(var_MS_B);
-  if(na_check_A <= 0 and na_check_B <= 0){
+  bool is_na_pooled_var_MS_A = ISNAN(var_MS_A);
+  bool is_na_pooled_var_MS_B = ISNAN(var_MS_B);
+  if((!is_na_pooled_var_MS_A) & (!is_na_pooled_var_MS_B)){
     lambda = var_MS_A / var_MS_B;  
   }
-  if(na_check_A > 0 or na_check_B > 0){
-    lambda = NA_REAL;
+  if(is_na_pooled_var_MS_A | is_na_pooled_var_MS_B){
+    lambda = 1;
   }
   
   float mean_MS_A = 0;
   float mean_MS_B = 0;
   
   for(int i = 0; i < N; ++i){
-    int na_check_A = ISNAN(MS_A[i]);
-    int na_check_B = ISNAN(MS_B[i]);
-    if(na_check_A <= 0){
+    bool is_na_mean_A = ISNAN(MS_A[i]);
+    bool is_na_mean_B = ISNAN(MS_B[i]);
+    if(!is_na_mean_A){
       mean_MS_A += MS_A[i];
     }
-    if(na_check_A > 0){
+    else if(is_na_mean_A){
       effective_N_A = effective_N_A - 1;
     }
-    if(na_check_B <= 0){
+    if(!is_na_mean_B){
       mean_MS_B += MS_B[i];
     }
-    if(na_check_B > 0){
+    else if(is_na_mean_B){
       effective_N_B = effective_N_B - 1;
     }
   }
@@ -212,9 +235,6 @@ List estimate_zeta(List data, int silence = 1) {
     mean_MS_B = NA_REAL;  
   }
   
-  int check_na_var_B = ISNAN(var_MS_B);
-  int check_na_var_A = ISNAN(var_MS_A);
-  
   if(silence == 0 or silence == -1){
     Rcout << "----- Progress (1 / 3) Calculations of variances and means -------" << "\n";
     Rcout << "## Pooled variance of MS_A is : " << var_MS_A << "\n";
@@ -228,7 +248,8 @@ List estimate_zeta(List data, int silence = 1) {
   
   // Calculate varpar and then zeta
   
-  if(lambda < 1 and check_na_var_B == 0 and check_na_var_A == 0){
+  if((lambda < 1) & (!is_na_pooled_var_MS_A) & (!is_na_pooled_var_MS_B)){
+    
     NumericVector x = MS_A;
     NumericVector y = MS_B;
     
@@ -239,9 +260,9 @@ List estimate_zeta(List data, int silence = 1) {
     float sxy = 0;
     float sse = 0;
     for(int i = 0; i < N; ++i){
-      int na_check_x = ISNAN(x[i]);
-      int na_check_y = ISNAN(y[i]);
-      if(na_check_x == 0 and na_check_y == 0){
+      bool na_check_x = ISNAN(x[i]);
+      bool na_check_y = ISNAN(y[i]);
+      if((!na_check_x) & (!na_check_y)){
         sxx = sxx + pow(x[i] - mx, 2);
         sxy = sxy + (x[i] - mx) * (y[i] - my);
       }
@@ -258,9 +279,9 @@ List estimate_zeta(List data, int silence = 1) {
     
     int effective_N = N;
     for(int i = 0; i < N; ++i){
-      int na_check_x = ISNAN(x[i]);
-      int na_check_y = ISNAN(y[i]);
-      if(na_check_x == 0 and na_check_y == 0){
+      bool na_check_x = ISNAN(x[i]);
+      bool na_check_y = ISNAN(y[i]);
+      if((!na_check_x) & (!na_check_y)){
         float yhat = b0 + b1 * x[i];  
         sse = sse + pow(y[i] - yhat, 2);
       }
@@ -289,7 +310,8 @@ List estimate_zeta(List data, int silence = 1) {
     List out = List::create(Named("zeta") = zeta);
     return out;
   }
-  else if(check_na_var_B == 0 and check_na_var_A == 0){
+  
+  else if((lambda >= 1) & (!is_na_pooled_var_MS_A) & (!is_na_pooled_var_MS_B)){
     
     NumericVector x = MS_B;
     NumericVector y = MS_A;
@@ -301,9 +323,9 @@ List estimate_zeta(List data, int silence = 1) {
     float sxy = 0;
     float sse = 0;
     for(int i = 0; i < N; ++i){
-      int na_check_x = ISNAN(x[i]);
-      int na_check_y = ISNAN(y[i]);
-      if(na_check_x == 0 and na_check_y == 0){
+      bool na_check_x = ISNAN(x[i]);
+      bool na_check_y = ISNAN(y[i]);
+      if((!na_check_x) & (!na_check_y)){
         sxx = sxx + pow(x[i] - mx, 2);
         sxy = sxy + (x[i] - mx) * (y[i] - my);
       }
@@ -323,9 +345,9 @@ List estimate_zeta(List data, int silence = 1) {
     
     int effective_N = N;
     for(int i = 0; i < N; ++i){
-      int na_check_x = ISNAN(x[i]);
-      int na_check_y = ISNAN(y[i]);
-      if(na_check_x == 0 and na_check_y == 0){
+      bool na_check_x = ISNAN(x[i]);
+      bool na_check_y = ISNAN(y[i]);
+      if((!na_check_x) & (!na_check_y)){
         float yhat = b0 + b1 * x[i];  
         sse = sse + pow(y[i] - yhat, 2);
       }
@@ -353,9 +375,23 @@ List estimate_zeta(List data, int silence = 1) {
     List out = List::create(Named("zeta") = zeta);
     return out;
   }
-  else{
-    stop("Pooled variance of either MS_A or MS_B is NA!");
+  
+  else if(is_na_pooled_var_MS_A & is_na_pooled_var_MS_B){
+    if(silence == -2){
+      warning("Pooled variance of both MS_A and MS_B are NA values. Zeta could not be calculated!");  
+    }
+    List out = List::create(Named("zeta") = NA_REAL);
+    return out;  
   }
-  List out = List::create(Named("zeta") = 1);
+  
+  else if(is_na_pooled_var_MS_A | is_na_pooled_var_MS_A){
+    if(silence == -2){
+      warning("Pooled variance of both MS_A and MS_B are NA values. Zeta could not be calculated!");  
+    }
+    List out = List::create(Named("zeta") = NA_REAL);
+    return out;  
+  }
+  List out = List::create(Named("zeta") = NA_REAL);
   return out;
+  
 }

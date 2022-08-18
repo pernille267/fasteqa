@@ -71,16 +71,22 @@ List global_precision_estimates(List data, int silence = 1) {
     NumericVector ith_sample_measurements_B(index_vector_length);
     
     // Checks for NA-values
-    // If R_IsNA results in 1 (i.e., NA-value) let the kth measurement be zero
-    // Otherwise, the kth measurement will be the kth measurement of MS_A / MS_B
+    // If ISNAN results in 1 (i.e., NA-value or NAN-value) let the kth measurement be zero
+    // Otherwise, the kth measurement will be the kth measurement of either MS_A or MS_B
     for(int k = 0; k < index_vector_length; ++k){
-      int na_check_A = R_IsNA(MS_A[index_vector[k]]);
-      if(na_check_A == 0){
+      bool na_check_A = ISNAN(MS_A[index_vector[k]]);
+      bool na_check_B = ISNAN(MS_B[index_vector[k]]);
+      if(!na_check_A){
         ith_sample_measurements_A[k] = MS_A[index_vector[k]];
       }
-      int na_check_B = R_IsNA(MS_B[index_vector[k]]);
-      if(na_check_B == 0){
+      else if(na_check_A){
+        ith_sample_measurements_A[k] = 0;
+      }
+      if(!na_check_B){
         ith_sample_measurements_B[k] = MS_B[index_vector[k]];  
+      }
+      else if(!na_check_B){
+        ith_sample_measurements_B[k] = 0;  
       }
     }
     
@@ -88,16 +94,16 @@ List global_precision_estimates(List data, int silence = 1) {
     IntegerVector NA_search_A(index_vector_length);
     IntegerVector NA_search_B(index_vector_length);
     
-    // recall: ith_sample_measurements_*[k] = 0 signify that the value is a NA-value
+    // Recall: ith_sample_measurements_*[k] = 1 signify that the value is a NA-value
     // NA_search_* will return 0 if ith_sample_measurements_*[k] = 0, and 1 otherwise 
     for(int k = 0; k < index_vector_length; ++k){
-      if(ith_sample_measurements_A[k] <= 0){
+      if(ith_sample_measurements_A[k] == 0){
         NA_search_A[k] = 0;
       }
       if(ith_sample_measurements_A[k] > 0){
         NA_search_A[k] = 1;
       }
-      if(ith_sample_measurements_B[k] <= 0){
+      if(ith_sample_measurements_B[k] == 0){
         NA_search_B[k] = 0;
       }
       if(ith_sample_measurements_B[k] > 0){
@@ -141,6 +147,7 @@ List global_precision_estimates(List data, int silence = 1) {
     }
     ++counter;
   }
+  
   int effective_N_A = N;
   int effective_n_A = n;
   int effective_N_B = N;
@@ -149,41 +156,41 @@ List global_precision_estimates(List data, int silence = 1) {
   float var_MS_B = 0;
   
   for(int j = 0; j < n; ++j){
-    int na_check_A = ISNAN(ith_var_MS_A[j]);
-    int na_check_B = ISNAN(ith_var_MS_B[j]);
-    if(na_check_A <= 0){
+    bool na_check_A = ISNAN(ith_var_MS_A[j]);
+    bool na_check_B = ISNAN(ith_var_MS_B[j]);
+    if(!na_check_A){
       var_MS_A += ith_var_MS_A[j];
     }
-    if(na_check_A > 0){
+    if(na_check_A){
       effective_n_A = effective_n_A - 1;
     }
-    if(na_check_B <= 0){
+    if(!na_check_B){
       var_MS_B += ith_var_MS_B[j];
     }
-    if(na_check_B > 0){
+    if(na_check_B){
       effective_n_B = effective_n_B - 1;
     }
   }
   
-  if(effective_n_A > 0){
+  if(effective_n_A >= 1){
     var_MS_A = var_MS_A / effective_n_A; 
   }
-  if(effective_n_A <= 0){
+  else if(effective_n_A < 1){
     var_MS_A = NA_REAL;
   }
-  if(effective_n_B > 0){
+  if(effective_n_B >= 1){
     var_MS_B = var_MS_B / effective_n_B;
   }
-  if(effective_n_B <= 0){
+  else if(effective_n_B <= 0){
     var_MS_B = NA_REAL;
   }
   float lambda = 0;
-  int na_check_A = ISNAN(var_MS_A);
-  int na_check_B = ISNAN(var_MS_B);
-  if(na_check_A <= 0 and na_check_B <= 0){
+  bool na_check_A = ISNAN(var_MS_A);
+  bool na_check_B = ISNAN(var_MS_B);
+  if((!na_check_A) & !(na_check_B)){
     lambda = var_MS_A / var_MS_B;  
   }
-  if(na_check_A > 0 or na_check_B > 0){
+  if(na_check_A | na_check_B){
     lambda = NA_REAL;
   }
   
@@ -191,18 +198,18 @@ List global_precision_estimates(List data, int silence = 1) {
   float mean_MS_B = 0;
   
   for(int i = 0; i < N; ++i){
-    int na_check_A = ISNAN(MS_A[i]);
-    int na_check_B = ISNAN(MS_B[i]);
-    if(na_check_A <= 0){
+    bool na_check_A = ISNAN(MS_A[i]);
+    bool na_check_B = ISNAN(MS_B[i]);
+    if(!na_check_A){
       mean_MS_A += MS_A[i];
     }
-    if(na_check_A > 0){
+    if(na_check_A){
       effective_N_A = effective_N_A - 1;
     }
-    if(na_check_B <= 0){
+    if(!na_check_B){
       mean_MS_B += MS_B[i];
     }
-    if(na_check_B > 0){
+    if(na_check_B){
       effective_N_B = effective_N_B - 1;
     }
   }
