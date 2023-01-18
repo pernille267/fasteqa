@@ -56,8 +56,10 @@ List predict_eqa(List data, List new_data, List imprecision_estimates, int R = 3
   float Var_B = imprecision_estimates["Var_B"];
   NumericVector MP_A = data["MP_A"];
   NumericVector MP_B = data["MP_B"];
+  // Converting integer types to float types when needed in division!
   int n = MP_B.length();
-  
+  float n_float = static_cast<float>(n);
+  float R_float = static_cast<float>(R);
   // Default values of existence checks
   int MP_A_exists = 0;
   int MP_B_exists = 0;
@@ -128,7 +130,7 @@ List predict_eqa(List data, List new_data, List imprecision_estimates, int R = 3
     for(int i = 0; i < n; ++i){
       msxy = msxy + (x[i] - mx) * (y[i] - my);
     }
-    msxy = msxy / (n - 1);
+    msxy = msxy / (n_float - 1);
     NumericVector latent(n);
     if(MP_B_exists == 0){
       stop("MP_B was not found in new_data. Calculations are terminated");
@@ -141,8 +143,8 @@ List predict_eqa(List data, List new_data, List imprecision_estimates, int R = 3
     float sub_expression_3 = 2 * msxy;
     float b1 = (sub_expression_1 + sub_expression_2) / sub_expression_3;
     float b0 = my - b1 * mx;
-    float varb1 = (pow(b1, 2) / (n * pow(msxy, 2))) * ((msxx * msyy) - pow(msxy, 2));
-    float hvar = R * (msyy + (lambda * msxx) - sub_expression_2) / (2 * lambda);
+    float varb1 = (pow(b1, 2) / (n_float * pow(msxy, 2))) * ((msxx * msyy) - pow(msxy, 2));
+    float hvar = (msyy + (lambda * msxx) - sub_expression_2) / (2 * lambda);
     if(hvar < 0.1 * Var_B){
       hvar = 0.1 * Var_B;
     }
@@ -151,7 +153,7 @@ List predict_eqa(List data, List new_data, List imprecision_estimates, int R = 3
     float mu_hat = 0;
     for(int i = 0; i < n; ++i){
       float latent_i = ((lambda / (lambda + pow(b1, 2))) * x[i]) + (b1 / (lambda + pow(b1, 2))) * (y[i] - b0);
-      mu_hat += latent_i / n;
+      mu_hat += latent_i / n_float;
       latent[i] = latent_i;
     }
     for(int j = 0; j < m; ++j){
@@ -164,7 +166,7 @@ List predict_eqa(List data, List new_data, List imprecision_estimates, int R = 3
     NumericVector upr(m);
     IntegerVector inside(m);
     for(int j = 0; j < m; ++j){
-      var_pred_error[j] = varb1 * pow((nl[j] - mu_hat), 2) + (varb1 * hvar / R) + (1 + (1 / n)) * (pow(b1, 2) * hvar + vvar) / R;
+      var_pred_error[j] = varb1 * pow((nl[j] - mu_hat), 2) + (varb1 * hvar / R_float) + (1 + (1 / n_float)) * (pow(b1, 2) * hvar + vvar) / R_float;
     }
     for(int j = 0; j < m; ++j){
       lwr[j] = ny[j] - t_quantile * sqrt(var_pred_error[j]);
@@ -231,13 +233,13 @@ List predict_eqa(List data, List new_data, List imprecision_estimates, int R = 3
     NumericVector y = MP_A;
     float mx = mean(x);
     float my = mean(y);
-    float msxx = var(x) * (n - 1) / n;
-    float msyy = var(y) * (n - 1) / n;
+    float msxx = var(x) * (n_float - 1) / n_float;
+    float msyy = var(y) * (n_float - 1) / n_float;
     float msxy = 0;
     for(int i = 0; i < n; ++i){
       msxy = msxy + (x[i] - mx) * (y[i] - my);
     }
-    msxy = msxy / n;
+    msxy = msxy / n_float;
     if(MP_B_exists == 0){
       stop("MP_B was not found in new_data. Calculations are terminated");
     }
@@ -248,7 +250,7 @@ List predict_eqa(List data, List new_data, List imprecision_estimates, int R = 3
     float sub_expression_3 = 2 * msxy;
     float b1 = (sub_expression_1 + sub_expression_2) / sub_expression_3;
     float b0 = my - b1 * mx;
-    float varb1 = (pow(b1, 2) / (n * pow(msxy, 2))) * ((msxx * msyy) - pow(msxy, 2));
+    float varb1 = (pow(b1, 2) / (n_float * pow(msxy, 2))) * ((msxx * msyy) - pow(msxy, 2));
     float hvar = Var_B;
     float vvar = lambda * hvar;
     float t_quantile = R::qt((1 - level) / 2, n * (R - 1), 0, 0);
@@ -262,7 +264,7 @@ List predict_eqa(List data, List new_data, List imprecision_estimates, int R = 3
     NumericVector upr(m);
     IntegerVector inside(m);
     for(int j = 0; j < m; ++j){
-      var_pred_error[j] = varb1 * pow((nx[j] - mx), 2) + (1 + (1 / n)) * (pow(b1, 2) * hvar + vvar) / R;
+      var_pred_error[j] = varb1 * pow((nx[j] - mx), 2) + (1 + (1 / n_float)) * (pow(b1, 2) * hvar + vvar) / R_float;
     }
     for(int j = 0; j < m; ++j){
       lwr[j] = ny[j] - t_quantile * sqrt(var_pred_error[j]);
@@ -328,7 +330,7 @@ List predict_eqa(List data, List new_data, List imprecision_estimates, int R = 3
     if(lambda > 1){
       NumericVector x = MP_B;
       NumericVector y = MP_A;
-      float sxx = var(x) * (n - 1);
+      float sxx = var(x) * (n_float - 1);
       float mx = mean(x);
       float my = mean(y);
       float sxy = 0;
@@ -342,7 +344,7 @@ List predict_eqa(List data, List new_data, List imprecision_estimates, int R = 3
       for(int i = 0; i < n; ++i){
         mse = mse + pow(y[i] - b0 - b1 * x[i], 2);
       }
-      mse = mse / (n - 2) / R;
+      mse = mse / (n_float - 2) / R_float;
       if(MP_B_exists == 0){
         stop("MP_B was not found in new_data. Calculations are terminated");
       }
@@ -356,7 +358,7 @@ List predict_eqa(List data, List new_data, List imprecision_estimates, int R = 3
       NumericVector upr(m);
       IntegerVector inside(m);
       for(int j = 0; j < m; ++j){
-        var_pred_error[j] = mse * (1 + (1 / n) + pow(nx[j] - mx, 2) / sxx);
+        var_pred_error[j] = mse * (1 + (1 / n_float) + pow(nx[j] - mx, 2) / sxx);
       }
       float t_quantile = R::qt((1 - level) / 2, n - 2, 0, 0);
       for(int j = 0; j < m; ++j){
@@ -404,7 +406,7 @@ List predict_eqa(List data, List new_data, List imprecision_estimates, int R = 3
     else{
       NumericVector x = MP_A;
       NumericVector y = MP_B;
-      float sxx = var(x) * (n - 1);
+      float sxx = var(x) * (n_float - 1);
       float mx = mean(x);
       float my = mean(y);
       float sxy = 0;
@@ -418,7 +420,7 @@ List predict_eqa(List data, List new_data, List imprecision_estimates, int R = 3
       for(int i = 0; i < n; ++i){
         mse = mse + pow(y[i] - b0 - b1 * x[i], 2);
       }
-      mse = mse / (n - 2) / R;
+      mse = mse / (n_float - 2) / R_float;
       if(MP_A_exists == 0){
         stop("MP_A was not found in new_data. Calculations are terminated");
       }
@@ -432,7 +434,7 @@ List predict_eqa(List data, List new_data, List imprecision_estimates, int R = 3
       NumericVector upr(m);
       IntegerVector inside(m);
       for(int j = 0; j < m; ++j){
-        var_pred_error[j] = mse * (1 + (1 / n) + pow(nx[j] - mx, 2) / sxx);
+        var_pred_error[j] = mse * (1 + (1 / n_float) + pow(nx[j] - mx, 2) / sxx);
       }
       float t_quantile = R::qt((1 - level) / 2, n - 2, 0, 0);
       for(int j = 0; j < m; ++j){

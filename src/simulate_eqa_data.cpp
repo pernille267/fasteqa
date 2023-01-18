@@ -409,7 +409,7 @@ List simulate_eqa_data(List parameters, int silence = 1){
     for(int r = 0; r < R; ++r){
       SampleID[idx[r]] = i + 1;
       ReplicateID[idx[r]] = r + 1;
-      MP_A[idx[r]] = tau[i] + R::rnorm(0, sdy) + relocate_sample_i * relocating_magnitude * sdy;
+      MP_A[idx[r]] = tau[i] + R::rnorm(0, sdy) + relocate_sample_i * relocating_magnitude * sqrt(pow(sdx, 2) + pow(sdy, 2));
       MP_B[idx[r]] = b0 + tau[i] * b1 + R::rnorm(0, sdx);
       if(MP_A[idx[r]] < 0){
         MP_A[idx[r]] = MP_A[idx[r]] * (-1);
