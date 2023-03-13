@@ -56,8 +56,8 @@ List predict_eqa(List data, List new_data, List imprecision_estimates, int R = 3
   float Var_B = imprecision_estimates["Var_B"];
   NumericVector MP_A = data["MP_A"];
   NumericVector MP_B = data["MP_B"];
-  // Converting integer types to float types when needed in division!
   int n = MP_B.length();
+  // Converting integer types to float types when needed in division!
   float n_float = static_cast<float>(n);
   float R_float = static_cast<float>(R);
   // Default values of existence checks
@@ -83,6 +83,7 @@ List predict_eqa(List data, List new_data, List imprecision_estimates, int R = 3
       SampleID_exists = 1;
     }
   }
+  // m is the number of new observations used in prediction of MP_A | MP_B
   int m = 0;
   if(MP_B_exists == 1){
     NumericVector sizer = new_data["MP_B"];
@@ -97,7 +98,7 @@ List predict_eqa(List data, List new_data, List imprecision_estimates, int R = 3
   NumericVector new_MP_B(m);
   CharacterVector new_SampleID(m);
   
-  // Based on existence, define the different columns of new_data
+  // Based on existence, we define the different columns of new_data
   if(MP_A_exists == 1){
     NumericVector candidate_MP_A = new_data["MP_A"];
     for(int j = 0; j < m; ++j){
@@ -118,7 +119,7 @@ List predict_eqa(List data, List new_data, List imprecision_estimates, int R = 3
   }
   
   
-  // Fuller & Gillard approach
+  // Fuller-Gillard (F-G) approach
   if(method == "fg"){
     NumericVector x = MP_B;
     NumericVector y = MP_A;
@@ -138,13 +139,17 @@ List predict_eqa(List data, List new_data, List imprecision_estimates, int R = 3
     NumericVector nx = new_MP_B;
     NumericVector ny(m);
     NumericVector nl(m);
+    
+    // Fitting the standard Deming model
     float sub_expression_1 = msyy - lambda * msxx;
     float sub_expression_2 = sqrt(pow(msyy - lambda * msxx, 2) + 4 * lambda * pow(msxy, 2));
     float sub_expression_3 = 2 * msxy;
     float b1 = (sub_expression_1 + sub_expression_2) / sub_expression_3;
     float b0 = my - b1 * mx;
+    
+    // Dispersion
     float varb1 = (pow(b1, 2) / (n_float * pow(msxy, 2))) * ((msxx * msyy) - pow(msxy, 2));
-    float hvar = (msyy + (lambda * msxx) - sub_expression_2) / (2 * lambda);
+    float hvar = (msyy + (lambda * msxx) - sub_expression_2) / (2 * lambda) * R_float;
     if(hvar < 0.1 * Var_B){
       hvar = 0.1 * Var_B;
     }
