@@ -71,6 +71,35 @@ bootstrap_ci <- function(bootstrapped_parameter_estimates, original_parameter_es
     .Call(`_fasteqa_bootstrap_ci`, bootstrapped_parameter_estimates, original_parameter_estimate, type, level, silence)
 }
 
+#' Calculate Absolute Differences in Non-Selectivity
+#'
+#' @title Calculate Absolute Differences in Non-Selectivity
+#' @name estimate_absolute_dins
+#' @param data \code{list} or \code{data.table} - The input dataset that must contain the following columns: \code{SampleID}, \code{ReplicateID}, \code{MP_A}, and \code{MP_B}.
+#' @param silence \code{integer} - The verbosity level of the output. Be aware that excessive progress reporting might negatively impact performance. The valid input options are as follows:
+#' \itemize{
+#' \item{\code{1: }}{All progress reports are silenced (default setting)}
+#' \item{\code{0: }}{Progress reports are partially shown, while debugging reports are omitted}
+#' \item{\code{-1: }}{All progress reports are enabled, providing the most detailed output}
+#' }
+#'
+#' @description This function calculates the absolute value of differences in non-selectivity, which are crucial when evaluating the commutability of reference materials or external quality assessment materials in the context of in vitro diagnostic medical devices.
+#'
+#' @details Differences in non-selectivity between diagnostic devices may lead to difficulties in commutability assessments. Larger values of absolute differences are particularly problematic. The function provides a point estimate of these differences with a precision of 1e-6.
+#'
+#' @return A list containing the point estimate of the absolute magnitude of differences in non-selectivity with a precision of 1e-6.
+#'
+#' @examples \dontrun{
+#' library(fasteqa)
+#' data <- simulate_data_eqa(list(n = 25, R = 3, cvx = 0.06, cvy = 0.04))
+#' calculate_absolute_dins(data)
+#' }
+NULL
+
+estimate_absolute_dins <- function(data, silence = 1L) {
+    .Call(`_fasteqa_estimate_absolute_dins`, data, silence)
+}
+
 #' Estimate differences in non-selectivity with zeta
 #' 
 #' @title Estimate differences in non-selectivity with zeta

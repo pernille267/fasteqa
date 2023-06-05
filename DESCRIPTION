@@ -11,4 +11,4 @@ Encoding: UTF-8
 Imports: 
     Rcpp
 LinkingTo: Rcpp
-RoxygenNote: 7.2.1
+RoxygenNote: 7.2.3

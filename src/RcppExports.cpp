@@ -40,6 +40,18 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// estimate_absolute_dins
+List estimate_absolute_dins(List data, int silence);
+RcppExport SEXP _fasteqa_estimate_absolute_dins(SEXP dataSEXP, SEXP silenceSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< List >::type data(dataSEXP);
+    Rcpp::traits::input_parameter< int >::type silence(silenceSEXP);
+    rcpp_result_gen = Rcpp::wrap(estimate_absolute_dins(data, silence));
+    return rcpp_result_gen;
+END_RCPP
+}
 // estimate_zeta
 List estimate_zeta(List data, int silence);
 RcppExport SEXP _fasteqa_estimate_zeta(SEXP dataSEXP, SEXP silenceSEXP) {
@@ -189,6 +201,7 @@ END_RCPP
 static const R_CallMethodDef CallEntries[] = {
     {"_fasteqa_BCa_bootstrap_ci", (DL_FUNC) &_fasteqa_BCa_bootstrap_ci, 5},
     {"_fasteqa_bootstrap_ci", (DL_FUNC) &_fasteqa_bootstrap_ci, 5},
+    {"_fasteqa_estimate_absolute_dins", (DL_FUNC) &_fasteqa_estimate_absolute_dins, 2},
     {"_fasteqa_estimate_zeta", (DL_FUNC) &_fasteqa_estimate_zeta, 2},
     {"_fasteqa_estimate_zeta_deming", (DL_FUNC) &_fasteqa_estimate_zeta_deming, 2},
     {"_fasteqa_fun_of_replicates", (DL_FUNC) &_fasteqa_fun_of_replicates, 3},
