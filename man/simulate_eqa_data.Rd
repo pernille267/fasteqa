@@ -18,8 +18,10 @@
   \item{\code{qran: }}{Interquantile range where systematic differences in non-selectivity should have its effect}
   \item{\code{prop: }}{average proportion of clinical samples affected by random differences in non-selectivity}
   \item{\code{mmax: }}{The maximum relocation magnitude in number of analytical SDs of y measurements. This assumes either prop or qpos and qran to be specified as well}
-  \item{\code{b0: }}{For systematic linear differences in non-selectivity. Intercept}
-  \item{\code{b1: }}{For systematic linear differences in non-selectivity. Slope}
+  \item{\code{b0: }}{For systematic linear DINS between IVD-MDs. Intercept}
+  \item{\code{b1: }}{For systematic linear DINS between IVD-MDs. Slope}
+  \item{\code{c0: }}{For systematic linear non-selectivity in IVD-MD 1. Intercept}
+  \item{\code{c1: }}{For systematic linear non-selectivity in IVD-MD 1. Slope}
 }}
 
 \item{silence}{\code{Integer} should temporary calculation results be printed? This may be useful for debugging or strange curiosity. \code{silence = 1} signify that printing will be suppressed, which is the default. \code{silence = 0} allows such printing}

@@ -20,8 +20,10 @@ using namespace Rcpp;
 //'   \item{\code{qran: }}{Interquantile range where systematic differences in non-selectivity should have its effect}
 //'   \item{\code{prop: }}{average proportion of clinical samples affected by random differences in non-selectivity}
 //'   \item{\code{mmax: }}{The maximum relocation magnitude in number of analytical SDs of y measurements. This assumes either prop or qpos and qran to be specified as well}
-//'   \item{\code{b0: }}{For systematic linear differences in non-selectivity. Intercept}
-//'   \item{\code{b1: }}{For systematic linear differences in non-selectivity. Slope}
+//'   \item{\code{b0: }}{For systematic linear DINS between IVD-MDs. Intercept}
+//'   \item{\code{b1: }}{For systematic linear DINS between IVD-MDs. Slope}
+//'   \item{\code{c0: }}{For systematic linear non-selectivity in IVD-MD 1. Intercept}
+//'   \item{\code{c1: }}{For systematic linear non-selectivity in IVD-MD 1. Slope}
 //' }
 //' @param silence \code{Integer} should temporary calculation results be printed? This may be useful for debugging or strange curiosity. \code{silence = 1} signify that printing will be suppressed, which is the default. \code{silence = 0} allows such printing 
 //' 
@@ -55,6 +57,8 @@ List simulate_eqa_data(List parameters, int silence = 1){
   int mmax_exists = 0;
   int b0_exists = 0;
   int b1_exists = 0;
+  int c0_exists = 0;
+  int c1_exists = 0;
   
   // Checks which of the parameters found in parameters argument
   CharacterVector given_parameters = parameters.names();
@@ -67,7 +71,7 @@ List simulate_eqa_data(List parameters, int silence = 1){
       Rcout << "ith given parameter : " << given_parameters[i] << "\n";  
     }
     
-    CharacterVector candidate_param(14);
+    CharacterVector candidate_param(16);
     candidate_param[0] = "n";
     candidate_param[1] = "R";
     candidate_param[2] = "cvx";
@@ -82,6 +86,8 @@ List simulate_eqa_data(List parameters, int silence = 1){
     candidate_param[11] = "mmax";
     candidate_param[12] = "b0";
     candidate_param[13] = "b1";
+    candidate_param[14] = "c0";
+    candidate_param[15] = "c1";
     
     if(candidate_param[0] == given_parameters[i]){
       n_exists = 1;
@@ -125,6 +131,13 @@ List simulate_eqa_data(List parameters, int silence = 1){
     else if(candidate_param[13] == given_parameters[i]){
       b1_exists = 1;
     }
+    else if(candidate_param[14] == given_parameters[i]){
+      c0_exists = 1;
+    }
+    else if(candidate_param[15] == given_parameters[i]){
+      c1_exists = 1;
+    }
+
   }
   if(silence == 0){
     Rcout << "Does n exists? 1 for yes and 0 for no : " << n_exists << "\n";
@@ -141,6 +154,8 @@ List simulate_eqa_data(List parameters, int silence = 1){
     Rcout << "Does mmax exists? 1 for yes and 0 for no : " << mmax_exists << "\n";
     Rcout << "Does b0 exists? 1 for yes and 0 for no : " << b0_exists << "\n";
     Rcout << "Does b1 exists? 1 for yes and 0 for no : " << b1_exists << "\n";
+    Rcout << "Does c0 exists? 1 for yes and 0 for no : " << c0_exists << "\n";
+    Rcout << "Does c1 exists? 1 for yes and 0 for no : " << c1_exists << "\n";
   }
 
   int n = 0;
@@ -157,6 +172,8 @@ List simulate_eqa_data(List parameters, int silence = 1){
   float mmax = 0;
   float b0 = 0;
   float b1 = 1;
+  float c0 = 0;
+  float c1 = 1;
   
   if(n_exists == 1){
     int reg_n = parameters["n"];
@@ -254,6 +271,16 @@ List simulate_eqa_data(List parameters, int silence = 1){
   if(b1_exists == 1){
     float reg_b1 = parameters["b1"];
     b1 = reg_b1;
+  }
+  
+  if(c0_exists == 1){
+    float reg_c0 = parameters["c0"];
+    c0 = reg_c0;
+  }
+  
+  if(c1_exists == 1){
+    float reg_c1 = parameters["c1"];
+    c1 = reg_c1;
   }
   
   if(qran_exists == 1 and prop_exists == 1){
@@ -409,8 +436,9 @@ List simulate_eqa_data(List parameters, int silence = 1){
     for(int r = 0; r < R; ++r){
       SampleID[idx[r]] = i + 1;
       ReplicateID[idx[r]] = r + 1;
-      MP_A[idx[r]] = tau[i] + R::rnorm(0, sdy) + relocate_sample_i * relocating_magnitude * sqrt(pow(sdx, 2) + pow(sdy, 2));
-      MP_B[idx[r]] = b0 + tau[i] * b1 + R::rnorm(0, sdx);
+      MP_B[idx[r]] = c0 + tau[i] * c1;
+      MP_A[idx[r]] = b0 + MP_B[idx[r]] * b1 + R::rnorm(0, sdy) + relocate_sample_i * relocating_magnitude * sqrt(pow(sdx, 2) + pow(sdy, 2));
+      MP_B[idx[r]] = MP_B[idx[r]] + R::rnorm(0, sdx);
       if(MP_A[idx[r]] < 0){
         MP_A[idx[r]] = MP_A[idx[r]] * (-1);
       }
