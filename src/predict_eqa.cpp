@@ -149,7 +149,7 @@ List predict_eqa(List data, List new_data, List imprecision_estimates, int R = 3
     
     // Dispersion
     float varb1 = (pow(b1, 2) / (n_float * pow(msxy, 2))) * ((msxx * msyy) - pow(msxy, 2));
-    float hvar = (msyy + (lambda * msxx) - sub_expression_2) / (2 * lambda) * R_float;
+    float hvar = (msyy + (lambda * msxx) - sub_expression_2) / (2 * lambda);
     if(hvar < 0.1 * Var_B){
       hvar = 0.1 * Var_B;
     }
