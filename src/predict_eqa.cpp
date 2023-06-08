@@ -149,11 +149,6 @@ List predict_eqa(List data, List new_data, List imprecision_estimates, int R = 3
     
     // Dispersion
     float varb1 = (pow(b1, 2) / (n_float * pow(msxy, 2))) * ((msxx * msyy) - pow(msxy, 2));
-    float hvar = (msyy + (lambda * msxx) - sub_expression_2) / (2 * lambda);
-    if(hvar < 0.1 * Var_B){
-      hvar = 0.1 * Var_B;
-    }
-    float vvar = lambda * hvar;
     float t_quantile = R::qt((1 - level) / 2, n - 2, 0, 0);
     float mu_hat = 0;
     for(int i = 0; i < n; ++i){
@@ -161,6 +156,11 @@ List predict_eqa(List data, List new_data, List imprecision_estimates, int R = 3
       mu_hat += latent_i / n_float;
       latent[i] = latent_i;
     }
+    float hvar = (msyy + (lambda * msxx) - sub_expression_2) / (2 * lambda) * R_float;
+    if(hvar < 0.1 * Var_B){
+      hvar = 0.1 * Var_B;
+    }
+    float vvar = lambda * hvar;
     for(int j = 0; j < m; ++j){
       ny[j] = b0 + b1 * nx[j];
       nl[j] = mu_hat * (1 - (msxy / (b1 * msxx))) + ny[j] * (msxy / (b1 * msxx));
