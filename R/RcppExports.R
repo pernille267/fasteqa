@@ -296,56 +296,64 @@ merge_results <- function(pb_data, ce_data, zeta_data, imprecision_data, roundin
     .Call(`_fasteqa_merge_results`, pb_data, ce_data, zeta_data, imprecision_data, rounding, include_imprecision_estimates, silence)
 }
 
-#' Estimate prediction intervals for EQA data with Deming or OLS
-#' 
-#' @title Estimate prediction intervals for EQA data with Deming or OLS
+#' Prediction Interval Estimation for EQA Data via Deming or OLS Regression
+#'
+#' @title Prediction Interval Estimation for EQA Data via Deming or OLS Regression
 #' @name predict_eqa
-#' 
-#' @param data \code{list} or \code{data table} - Mean-of-replicates clinical sample data with elements/columns \code{SampleID}, \code{MP_A} and \code{MP_B}
-#' @param new_data \code{list} or \code{data table} - Mean-of-replicates control material data with \code{MP_B}. \code{SampleID} and \code{MP_A} may also be in new_data based on desired output structure:
+#'
+#' @description This function estimates prediction intervals for External Quality Assessment (EQA) data by applying either Deming (\code{method = 'fg'} or \code{method = 'clsi'}) or Ordinary Least Squares (\code{method = 'ols'}) regression methodologies. It is specifically designed for a single In Vitro Diagnostic Medical Device (IVD-MD) comparison. For processing multiple IVD-MD comparisons simultaneously, consider using the \code{estimate_prediction_data()} function from the commutability package, which executes this function on a per IVD-MD comparison basis.   
+#'
+#' @param data A \code{list} or \code{data.table} representing mean-of-replicates clinical sample data with the \code{list} elements or \code{data.table} columns: \code{SampleID}, \code{MP_A}, and \code{MP_B}.
+#' @param new_data A \code{list} or \code{data.table} representing mean-of-replicates EQA material / reference material data. This should at least include \code{MP_B} but may also contain \code{SampleID} and \code{MP_A} depending on the desired output structure:
 #' \itemize{
-#'   \item{\code{Minimum requirement: }}{Must contain \code{MP_B}}
-#'   \item{\code{method = ols: }}{Must at least contain both \code{MP_B} and \code{MP_A}}
-#'   \item{\code{Inside checks performed: }}{Must at least contain both \code{MP_B} and \code{MP_A}}
-#'   \item{\code{Sample-wise prediction}}{Must at least contain \code{MP_B} and \code{SampleID} (plus \code{MP_A} if method = ols)}
+#'   \item{\code{Minimum requirement}: }{new_data must include \code{MP_B}}
+#'   \item{\code{method = 'ols'}: }{new_data must include both \code{MP_B} and \code{MP_A}}
+#'   \item{\code{Inside checks performed}: }{new_data must include both \code{MP_B} and \code{MP_A}}
+#'   \item{\code{Sample-wise prediction}: }{new_data must include \code{MP_B} and \code{SampleID} (plus \code{MP_A} if method = 'ols')}
 #' }
-#' @param imprecision_estimates \code{list} or \code{data table} - Imprecision estimates e.g., that which are outputted by \code{global_precision_estimates()}. Minimum requirement: \code{lambda} and \code{Var_B} must be part of the  
-#' @param R integer - Number of replicates, which new_data is based on
-#' @param method string - Which method should be used to estimate the prediction intervals. Default is \code{fg}. At the moment, possible values for method is
+#' @param imprecision_estimates A \code{list} or \code{data.table} that includes necessary imprecision estimates. If \code{method} is \code{'fg'} or \code{'ols'}, this parameter should contain \code{lambda}. In case of \code{method = 'clsi'}, both \code{lambda} and \code{Var_B} must be included. The function \code{global_precision_estimates()} can be employed to generate suitable input for this parameter directly.
+#' @param R An \code{integer} indicating the number of replicates on which new_data is based. The convenience function \code{count_samplewise_replicates()} can be employed to generate suitable input for this parameter directly
+#' @param R_ratio An \code{float} indicating the ratio of replicates between that number data and that number new_data are based on. Only relevant if \code{method = 'fg'} and if the number of replicates of data and new_data differs.
+#' @param method A \code{string} specifying the method for estimating the prediction intervals. Default is \code{'fg'}. Current possible prediction interval estimation methods are:
 #' \itemize{
-#'   \item{\code{fg: }}{Standard Deming regression, but prediction intervals are calculated using components from J. Gillards work}
-#'   \item{\code{clsi: }}{Standard Deming regression, but prediction intervals are calculated based on derivation of Jeff Vaks}
-#'   \item{\code{ols: }}{Ordinary least squares regression, but the predictor is chosen so that neglected prediction error variance is reduced}
+#'   \item{\code{fg: }}{Implements standard Deming regression with prediction intervals calculated using the Fuller and Gillard methods.}
+#'   \item{\code{clsi: }}{Utilizes standard Deming regression, with prediction intervals derived from the CLSI method.}
+#'   \item{\code{ols: }}{Implements Ordinary Least Squares regression, where the predictor is selected to minimize the variance of the ignored IVD-MD uncertainty. Specifically, \code{MP_A} is used as the predictor when \code{lambda < 1}, otherwise, \code{MP_B} is utilized.}
 #' }
-#' @param level float - Confidence level of prediction intervals. Should ideally be corrected for simulations testing. Default level is 0.99
-#' @param rounding integer - How many decimals should be included in the predictions and prediction intervals. Two or three decimals are often sufficient. Default is 3
+#' @param level A \code{float} representing the confidence level for the prediction intervals. It should be between \code{0} and \code{1}. The default setting is \code{0.99}. Please adjust for simultaneous testing if pointwise prediction intervals are used for classifying more than one EQA material / reference material in the same IVD-MD comparison.
+#' @param rounding An \code{integer} specifying the desired decimal places for the predictions and prediction intervals. The default setting is three, offering sufficient precision. The maximum limit is six due to the utilization of floating-point numbers.
 #'
-#' @description A rich function that calculates prediction intervals for EQA data
-#' 
+#' @details For optimal results, we recommended to include \code{SampleID}, \code{MP_A}, and \code{MP_B} in new_data whenever possible. If only \code{MP_B} is available, the use of \code{method = 'ols'} is not possible. For instance, when constructing prediction bands, only \code{MP_B} might be available. Thus, \code{method = 'ols'} may sadly not be used to estimate pointwise prediction intervals using this function.
 #'
-#' @details If possible it is wise to always include \code{SampleID}, \code{MP_A} and \code{MP_B} in new_data. If by some reason only \code{MP_B} is available, one cannot use \code{method = ols}. For example, when construction predicton bands, we will only have \code{MP_B} is available.
-#'
-#' @return list - prediction interval data based on use-inputs
+#' @return A \code{list} comprising estimated prediction interval data based on user inputs. The output \code{list} may be converted to \code{data.table} by employing the \code{setDT()} method from the \code{data.table} package in R.
 #'
 #' @examples \dontrun{
-#'   library(fasteqa)
-#'   training_parameters <- list(n = 25, R = 3, cvx = 0.01, cvy = 0.015, cil = 10, ciu = 70)
-#'   test_parameters <- list(n = 5, R = 3, cvx = 0.01, cvy = 0.015, cil = 10, ciu = 70)
-#'   training_data <- simulate_eqa_data(training_parameters)
-#'   test_data <- simulate_eqa_data(test_parameters)
-#'   training_data$$SampleID <- as.character(training_data$SampleID)
-#'   training_data$$ReplicateID <- as.character(training_data$ReplicateID)
-#'   imprecision <- global_precision_estimates(data)
-#'   mean_of_replicates_training_data <- fun_of_replicates(training_data)
-#'   mean_of_replicates_test_data <- fun_of_replicates(test_data)
-#'   prediction_intervals <- predict_eqa(mean_of_replicates_training data,
-#'                                       mean_of_replicates_test_data,
-#'                                       imprecision)
+#' library(fasteqa)
+#' # Simulation parameters for clinical sample data
+#' training_parameters <- list(n = 25, R = 3, cvx = 0.01, cvy = 0.015, cil = 10, ciu = 70)
+#' # Simulation parameters for external quality assessment material data (commutable materials)
+#' test_parameters <- list(n = 5, R = 3, cvx = 0.01, cvy = 0.015, cil = 10, ciu = 70)
+#' # Simulation of clinical sample data using the simulation parameters 'training_parameters'
+#' training_data <- simulate_eqa_data(training_parameters)
+#' # Simulation of external quality assessment material data using the simulation parameters 'test_parameters'
+#' test_data <- simulate_eqa_data(test_parameters)
+#' # Convert ID columns to character type because this is the type accepted
+#' training_data$SampleID <- as.character(training_data$SampleID)
+#' training_data$ReplicateID <- as.character(training_data$ReplicateID)
+#' # Estimate imprecision estimates
+#' imprecision <- global_precision_estimates(training_data)
+#' # Calculate mean-of-replicates data
+#' mean_of_replicates_training_data <- fun_of_replicates(training_data)
+#' mean_of_replicates_test_data <- fun_of_replicates(test_data)
+#' # Estimate prediction intervals using method = 'fg', R = 3L and R_ratio = 1:
+#' prediction_intervals <- predict_eqa(mean_of_replicates_training_data,
+#'                                     mean_of_replicates_test_data,
+#'                                     imprecision)
 #' }
 NULL
 
-predict_eqa <- function(data, new_data, imprecision_estimates, R = 3L, method = "fg", level = 0.99, rounding = 3L) {
-    .Call(`_fasteqa_predict_eqa`, data, new_data, imprecision_estimates, R, method, level, rounding)
+predict_eqa <- function(data, new_data, imprecision_estimates, R = 3L, R_ratio = 1, method = "fg", level = 0.99, rounding = 3L) {
+    .Call(`_fasteqa_predict_eqa`, data, new_data, imprecision_estimates, R, R_ratio, method, level, rounding)
 }
 
 #' Resample fun-of-replicates data
