@@ -40,7 +40,7 @@ using namespace Rcpp;
 //' test_parameters <- list(n = 5, R = 3, cvx = 0.01, cvy = 0.015, cil = 10, ciu = 70)
 //' # Simulation of clinical sample data using the simulation parameters 'training_parameters'
 //' training_data <- simulate_eqa_data(training_parameters)
-//' # Simulation of external quality assessment material data using the simulation parameters 'test_parameters'
+//' # Simulation of external quality assessment material data based on 'test_parameters'
 //' test_data <- simulate_eqa_data(test_parameters)
 //' # Convert ID columns to character type because this is the type accepted
 //' training_data$SampleID <- as.character(training_data$SampleID)
@@ -139,7 +139,7 @@ List predict_eqa(List data, List new_data, List imprecision_estimates, int R = 3
     for(int i = 0; i < n; ++i){
       msxy = msxy + (x[i] - mx) * (y[i] - my);
     }
-    msxy = msxy / (n_float - 1);
+    msxy = msxy / (n_float - 1.0);
     NumericVector latent(n);
     if(MP_B_exists == 0){
       stop("MP_B was not found in new_data. Calculations are terminated");

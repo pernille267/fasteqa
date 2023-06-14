@@ -71,6 +71,50 @@ bootstrap_ci <- function(bootstrapped_parameter_estimates, original_parameter_es
     .Call(`_fasteqa_bootstrap_ci`, bootstrapped_parameter_estimates, original_parameter_estimate, type, level, silence)
 }
 
+#' Count the number of replicated measurements for each sample for either CS data or EQAM data
+#'
+#' @title Count the number of replicated measurements for each sample for either CS data or EQAM data
+#' @name count_samplewise_replicates
+#'
+#' @description This function counts the number of replicated measurements done on each sample within a IVD-MD comparison for either clinical sample (CS) data or external quality asessment material (EQAM) data 
+#'
+#' @param data A \code{list} or \code{data.table} representing CS data or EQAM data with the \code{list} elements or \code{data.table} columns: \code{SampleID}, \code{MP_A}, and \code{MP_B}.
+#' @param summary A \code{character} specifying the summary statistic of the sample-wise number of replicates. Default is \code{'mode'}. Possible summary statistics include:
+#' \itemize{
+#'   \item{\code{none}: }{Returns a \code{integer vector} containing the sample-wise number of replicates for the input \code{data}.}
+#'   \item{\code{mode}: }{Returns the mode of the sample-wise number of replicates for the input \code{data}.}
+#'   \item{\code{median}: }{Returns the median of the sample-wise number of replicates for the input \code{data}.}
+#'   \item{\code{mean}: }{Returns the arithmetic mean (\code{float} type) calculated from the sample-wise number of replicates present in the input \code{data}.}
+#'   \item{\code{ceiling}: }{Computes and returns the rounded-up (ceiling) value of the arithmetic mean calculated from the sample-wise number of replicates present in the input \code{data}.}
+#'   \item{\code{floor}: }{Computes and returns the rounded-down (floor) value of the arithmetic mean calculated from the sample-wise number of replicates present in the input \code{data}.}
+#'   \item{\code{round}: }{Computes and returns the rounded (nearest integer) value of the arithmetic mean calculated from the sample-wise number of replicates present in the input \code{data}.}
+#' }
+#' @param invalid_NA A \code{logical} that determines the function's behavior in response to invalid \code{data} or \code{summary} input. If set to TRUE, the function will return an NA value when encountering invalid input or computation errors, rather than throwing an error. While generally not recommended due to potential masking of issues, this may be useful in certain scenarios where uninterrupted execution is desired.
+#' @param silence An \code{integer} that dictates the verbosity level of the console output. If \code{silence} is set to a value less than 1, various verbose output, including debugging reports, will be displayed depending on the specific value of \code{silence}.
+#'
+#' @details The function \code{predict_eqa()} hinges on the count of replicates performed for its \code{data} parameter. When the \code{method} is either 'fg' or 'ols', it's essential to tally the replicates for both \code{data} and \code{new_data} inputs. This handy function offers a streamlined solution. It allows for the direct usage of \code{predict_eqa()} without requiring manual counting of the sample-wise replicates, thereby enhancing efficiency and ease of use.
+#'
+#' @return Returns a \code{list} that contains a single element, \code{R_i}. The type of \code{R_i} depends on the value of the \code{summary} parameter. It is typically an integer. However, if \code{summary} is set to 'none', \code{R_i} becomes an integer vector. When \code{summary} is set to 'mean', \code{R_i} is returned as a floating-point number.
+#'
+#' @examples \dontrun{
+#' library(fasteqa)
+#' # Simulation parameters for clinical sample data
+#' cs_parameters <- list(n = 25, R = 3,
+#'                       cvx = 0.01, cvy = 0.015,
+#'                       cil = 10, ciu = 70)
+#' # Use the simulation parameters to simulate toy clinical sample data                      
+#' cs_data <- simulate_eqa_data(cs_parameters)
+#' # Calculate mode of sample-wise number of replicates
+#' mode_R <- count_samplewise_replicates(cs_data, summary = 'mode')$R_i
+#' # Count sample-wise number of replicates
+#' samplewise_R <- count_samplewise_replicates(cs_data, summary = 'none')$R_i                                    
+#' }
+NULL
+
+count_samplewise_replicates <- function(data, summary = "mode", invalid_NA = TRUE, silence = 1L) {
+    .Call(`_fasteqa_count_samplewise_replicates`, data, summary, invalid_NA, silence)
+}
+
 #' Calculate Absolute Differences in Non-Selectivity
 #'
 #' @title Calculate Absolute Differences in Non-Selectivity
@@ -335,7 +379,7 @@ merge_results <- function(pb_data, ce_data, zeta_data, imprecision_data, roundin
 #' test_parameters <- list(n = 5, R = 3, cvx = 0.01, cvy = 0.015, cil = 10, ciu = 70)
 #' # Simulation of clinical sample data using the simulation parameters 'training_parameters'
 #' training_data <- simulate_eqa_data(training_parameters)
-#' # Simulation of external quality assessment material data using the simulation parameters 'test_parameters'
+#' # Simulation of external quality assessment material data based on 'test_parameters'
 #' test_data <- simulate_eqa_data(test_parameters)
 #' # Convert ID columns to character type because this is the type accepted
 #' training_data$SampleID <- as.character(training_data$SampleID)
