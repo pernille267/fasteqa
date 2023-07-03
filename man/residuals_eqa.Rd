@@ -4,29 +4,29 @@
 \alias{residuals_eqa}
 \title{Obtain the residuals based on data and imprecision estimates}
 \arguments{
-\item{data}{\code{list} or \code{data table} - Mean-of-replicates clinical sample data with elements/columns \code{SampleID}, \code{MP_A} and \code{MP_B}}
+\item{data}{A \code{list} or \code{data.table} that includes mean values of replicated clinical sample data, grouped by \code{SampleID}. The data for the two compared IVD-MDs under consideration should be found in the columns named \code{MP_A} and \code{MP_B}. The \code{SampleID} should be a character vector, whereas \code{MP_A} and \code{MP_B} must be numeric vectors.}
 
-\item{imprecision_estimates}{\code{list} or \code{data table} - Imprecision estimates e.g., that which are outputted by \code{global_precision_estimates()}. Minimum requirement: \code{lambda} and \code{Var_B} must be part of the}
+\item{imprecision_estimates}{A \code{list} or \code{data.table} carrying imprecision estimates for IVD-MD, ideally matching those provided by the \code{global_precision_estimates()} function. A non-missing positive value for \code{lambda} is the minimum requirement.}
 
-\item{method}{character - Which method should be used to obtain the residuals. Default is \code{fg}. At the moment, possible values for method is
+\item{method}{A \code{character} string specifying the linear regression model applied for obtaining the residuals and fitted values. The default value is \code{fg}. The possible values for \code{method} include:
 \itemize{
-  \item{\code{fg: }}{Standard Deming regression, using components from W. Fuller and J. Gillards work}
-  \item{\code{clsi: }}{Standard Deming regression based the EP14 standard, which is derived by J. Vaks}
-  \item{\code{ols: }}{Ordinary least squares regression}
+  \item{\code{fg: }}{Refers to Deming regression, incorporating elements from the work of W. Fuller and J. Gillard.}
+  \item{\code{clsi: }}{Refers to Deming regression, based on the CLSI EP14 standard.}
+  \item{\code{ols: }}{Represents ordinary least squares regression.}
 }}
 
-\item{studentize}{integer - \code{1} (default) for yes, and \code{0} for no.}
+\item{studentize}{An \code{integer}. When set to \code{1} (default), the residuals get studentized, implying the mean of the residuals is subtracted from each residual and then divided by the standard deviation of the residuals. If set to \code{0}, residuals are not studentized. Studentized residuals can be beneficial if there is a need to compare the residuals' distribution to the standard normal distribution or a specific t-distribution.}
 }
 \value{
-\code{list} containing two numeric vectors, that are residuals and fitted values
+This function returns a \code{list} comprising two numeric vectors named \code{residuals} and \code{fitted}. These are the residuals and fitted values, respectively, based on the input \code{data}, \code{imprecision_estimates}, and \code{method}.
 }
 \description{
-A simple function extracting the residuals based on \code{data}
+This function efficiently extracts the residuals and fitted values based on the provided \code{data}, \code{imprecision_estimates}, and \code{method}.
 }
 \details{
 Obtain the residuals based on data and imprecision estimates
 
-The practical differences of outcome between the three available methods may be small. \code{fg} estimates latent values, and uses n - 1 degrees of freedom instead of n which is used by CLSI. CLSI does not estimate latent variables. OLS does of course ignore imprecision in x.
+While the outcome differences between the three provided methods may be minute, they can still be noteworthy. Suppose 'n' is the count of unique clinical samples. The \code{fg} method estimates latent concentration values and utilizes n - 1 degrees of freedom. In contrast, \code{clsi} does not estimate latent variables and uses 'n' degrees of freedom. The model associated with \code{ols} overlooks the imprecision in \code{MP_B}.
 }
 \examples{
 \dontrun{

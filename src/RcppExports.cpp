@@ -187,8 +187,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // residuals_eqa
-List residuals_eqa(List data, List imprecision_estimates, String method, int studentize);
-RcppExport SEXP _fasteqa_residuals_eqa(SEXP dataSEXP, SEXP imprecision_estimatesSEXP, SEXP methodSEXP, SEXP studentizeSEXP) {
+List residuals_eqa(List data, List imprecision_estimates, String method, int studentize, bool invalid_NA);
+RcppExport SEXP _fasteqa_residuals_eqa(SEXP dataSEXP, SEXP imprecision_estimatesSEXP, SEXP methodSEXP, SEXP studentizeSEXP, SEXP invalid_NASEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -196,7 +196,8 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< List >::type imprecision_estimates(imprecision_estimatesSEXP);
     Rcpp::traits::input_parameter< String >::type method(methodSEXP);
     Rcpp::traits::input_parameter< int >::type studentize(studentizeSEXP);
-    rcpp_result_gen = Rcpp::wrap(residuals_eqa(data, imprecision_estimates, method, studentize));
+    Rcpp::traits::input_parameter< bool >::type invalid_NA(invalid_NASEXP);
+    rcpp_result_gen = Rcpp::wrap(residuals_eqa(data, imprecision_estimates, method, studentize, invalid_NA));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -227,7 +228,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_fasteqa_predict_eqa", (DL_FUNC) &_fasteqa_predict_eqa, 8},
     {"_fasteqa_resample_fun_data", (DL_FUNC) &_fasteqa_resample_fun_data, 2},
     {"_fasteqa_resample_samples", (DL_FUNC) &_fasteqa_resample_samples, 2},
-    {"_fasteqa_residuals_eqa", (DL_FUNC) &_fasteqa_residuals_eqa, 4},
+    {"_fasteqa_residuals_eqa", (DL_FUNC) &_fasteqa_residuals_eqa, 5},
     {"_fasteqa_simulate_eqa_data", (DL_FUNC) &_fasteqa_simulate_eqa_data, 2},
     {NULL, NULL, 0}
 };

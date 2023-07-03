@@ -4,31 +4,31 @@
 \alias{bootstrap_ci}
 \title{Estimate simple bootstrap confidence intervals}
 \arguments{
-\item{bootstrapped_parameter_estimates}{Numeric vector - Bootstrapped estimates of the parameter of interest}
+\item{bootstrapped_parameter_estimates}{A \code{numeric vector} storing bootstrapped estimates of the target parameter. A couple of missing values are allowed and will be removed if present.}
 
-\item{original_parameter_estimate}{Double - Original point estimate of the parameter of interest}
+\item{original_parameter_estimate}{A \code{double} representing the original point estimate of the target parameter. A missing value is not allowed.}
 
-\item{type}{Integer - Which type of bootstrap confidence interval is required
+\item{type}{An \code{integer} that refers to the type of bootstrap confidence interval to be estimated. Valid inputs include:
 \itemize{
   \item{\code{1: }}{Standard normal bootstrap confidence interval}
   \item{\code{2: }}{Basic bootstrap confidence interval}
   \item{\code{3: }}{Percentile bootstrap confidence interval}
 }}
 
-\item{level}{Double - Required confidence level for the estimated confidence interval}
+\item{level}{A \code{double} between 0 and 1, indicating the desired confidence level for the estimated bootstrap confidence interval of the target parameter. Defaulting to \code{0.95}.}
 
-\item{silence}{Integer - Controls the progress reports outputted for debugging and further examination of the command. \code{silence = -1} or \code{silence = 0} signify that progress reports should be printed. Default is \code{silence = 1} which suppresses all printing}
+\item{silence}{An \code{integer} controlling the level of progress reporting for debugging and analysis. Set to \code{-1} or \code{0} for detailed reports. Defaults to \code{1} to suppress output.}
 }
 \value{
-A numeric vector. The first element of the vector is the lower bound of the confidence interval, and the second element of the vector is the upper bound of the confidence interval
+A \code{numeric vector} with two entries: the lower and upper bounds of the bootstrap confidence interval, respectively.
 }
 \description{
-Estimation of bootstrap confidence intervals for a parameter of interest
+Estimation of bootstrap confidence intervals for a parameter of interest based on \code{bootstrapped_parameter_estimates}, \code{original_parameter_estimate}, \code{type} and \code{level}.
 }
 \details{
 Estimate simple bootstrap confidence intervals
 
-To get an adequate estimate of the theoretical confidence interval, it is essential that original data represents the underlying distribution for the population parameter. More data typically corresponds with larger probability of our data being representative. For second-order accurate and transformation respective confidence intervals, you may employ \code{BCa_bootstrap_ci()} instead. Note that \code{BCa_bootstrap_ci()} require jack knife estimates of the parameter of interest as well as bootstrap estimates
+To get an adequate estimate of the theoretical confidence interval for the target parameter, it is essential that the original data represents the underlying distribution for the population parameter. More data typically corresponds with larger probability of our data being representative. For second-order accurate and transformation respective confidence intervals, you may employ \code{BCa_bootstrap_ci()} instead. Note that \code{BCa_bootstrap_ci()} requires jack knife estimates of the parameter of interest as well as bootstrap estimates
 }
 \examples{
 \dontrun{
