@@ -6,23 +6,25 @@
 \arguments{
 \item{data}{\code{list} or \code{data table} - Data with elements/columns \code{SampleID}, \code{ReplicateID}, \code{MP_A} and \code{MP_B}}
 
-\item{silence}{\code{integer} - How much progress reports should be returned. Note that returning progress reports will slow down the performance drastically. There are three valid inputs:
+\item{silence}{\code{integer} - Controls verbose. Allowing verbose, will slow down estimation of zeta. Thus, in general, it should not be used. There are three valid inputs:
 \itemize{
-  \item{\code{1: }}{All progress reports are silenced and is the default}
-  \item{\code{0: }}{Some progress reports are delivered, but debugging reports are suppressed}
-  \item{\code{-1: }}{All prorgress reports are delivered}
+  \item{\code{1: }}{All progress reports are silenced. This is the default.}
+  \item{\code{0: }}{Estimation steps and temporary results are printed to the console}
+  \item{\code{<0: }}{Debugging. Expert use only.}
 }}
 }
 \value{
-A list with the point estimate of zeta. The zeta value is a float value, meaning that the precision is 1e-6 (six decimals precision).
+A \code{list} containing the a point estimate of differences in non-selectivity, zeta. The estimated zeta value is a floating-point value, meaning that the precision is 1e-6 (six decimals precision).
 }
 \description{
-Estimate the degree of differences in non-selectivity with zeta. Zeta is is the ratio of the pooled average prediction error variance and the sum of analytical variances.
+Estimate the magnitude of differences in non-selectivity, zeta. The measure, zeta, is a theoretical measure being the ratio of the pooled prediction error variance of the OLS model and the irreducible variance of the OLS model.
+             This function estimates zeta using a plug-in estimator for it. See references (coming..) for details on the estimator.
 }
 \details{
 Estimate differences in non-selectivity with zeta
 
-Differences in non-selectivity between measurement systems may cause problems in e.g., evaluation of commutability. A large value of zeta indicates that we have have large differences in non-selectivity between compared measurement systems. An upper limit of acceptable zeta may be determined based on the allowable increase in prediction interval width and analyte of relevance
+Differences in non-selectivity between in vitro diagnostic medical devices may cause problems in e.g., evaluation of commutability of external quality assessment materials or certified reference materials. A large estimate of zeta indicates that we have considerable differences in non-selectivity between compared IVD-MDs.
+         An upper limit of acceptable zeta estimates may for example be determined based on an particular allowable average relative increase in prediction interval widths due to differences in non-selectivity. Recommendations for choosing allowable average relative increase in prediction interval widths may be found elsewhere.
 }
 \examples{
 \dontrun{

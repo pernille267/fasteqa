@@ -254,9 +254,9 @@ List estimate_zeta_deming(List data, int silence = 1) {
     }
   }
   
-  msxx = msxx / (effective_N_B - 1);
-  msyy = msyy / (effective_N_A - 1);
-  msxy = msxy / (effective_N_A - 1);
+  msxx = msxx / (effective_N_B - 1.0);
+  msyy = msyy / (effective_N_A - 1.0);
+  msxy = msxy / (effective_N_A - 1.0);
   
   float sub_expression_1 = msyy - lambda * msxx;
   float sub_expression_2 = sqrt(pow(msyy - lambda * msxx, 2) + 4 * lambda * pow(msxy, 2));
@@ -264,7 +264,7 @@ List estimate_zeta_deming(List data, int silence = 1) {
   float b1 = (sub_expression_1 + sub_expression_2) / sub_expression_3;
   float varb1 = (pow(b1, 2) / ((effective_N_A) * pow(msxy, 2))) * ((msxx * msyy) - pow(msxy, 2));
   float hvar = (msyy + (lambda * msxx) - sub_expression_2) / (2 * lambda);
-  float varpar = varb1 * msxx + varb1 * hvar + (1 + 1 / effective_N_A) * (pow(b1, 2) + lambda) * hvar;
+  float varpar = varb1 * msxx + varb1 * hvar + (1 + 1.0 / effective_N_A) * (pow(b1, 2) + lambda) * hvar;
   float zeta = varpar / (var_MS_A + var_MS_B * pow(b1, 2));
   
   if(silence == 0 or silence == -1){
