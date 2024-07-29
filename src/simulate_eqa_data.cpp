@@ -391,6 +391,14 @@ List simulate_eqa_data(List parameters, int silence = 1){
     error_dist = reg_error_dist;
     if(error_dist != "norm" and (error_dist == "lt" or error_dist == "t" or error_dist == "lst")){
       error_dist = "lt";
+      if(dfx_exists == 1){
+        float reg_dfx = parameters["dfx"];
+        dfx = reg_dfx;
+      }
+      if(dfy_exists == 1){
+        float reg_dfy = parameters["dfy"];
+        dfy = reg_dfy;
+      }
     }
   }
   
