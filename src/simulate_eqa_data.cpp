@@ -597,7 +597,7 @@ List simulate_eqa_data(List parameters, int silence = 1){
   }
   else if(dist == "lst"){
     for(int i = 0; i < n; ++i){
-      unsorted_tau[i] = mu_tau + sigma_tau + R::rt(df_tau);
+      unsorted_tau[i] = mu_tau + sigma_tau * R::rt(df_tau);
     }  
   }
   else if(dist == "lnorm"){
