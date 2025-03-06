@@ -1,30 +1,76 @@
 #include <Rcpp.h>
 using namespace Rcpp;
 
-//' Count the number of replicated measurements for each sample for either CS data or EQAM data
-//'
-//' @title Count the number of replicated measurements for each sample for either CS data or EQAM data
+// (*) Helper function for obtaining unique elements maintaining their original order
+CharacterVector unique_preserve_order_csr(CharacterVector x) {
+  std::unordered_set<std::string> seen;
+  CharacterVector result;
+  for(int i = 0; i < x.length(); i++) {
+    std::string current = as<std::string>(x[i]);
+    if(seen.find(current) == seen.end()) {
+      seen.insert(current);
+      result.push_back(x[i]);
+    }
+  }
+  return result;
+}
+
+//' @title Count the Number of Replicated for Each Sample
 //' @name count_samplewise_replicates
 //'
-//' @description This function counts the number of replicated measurements done on each sample within a IVD-MD comparison for either clinical sample (CS) data or external quality asessment material (EQAM) data 
+//' @param data A \code{list} or \code{data.table} representing CS data or EQAM data
+//'        with the \code{list} elements or \code{data.table} columns:
+//'        \code{SampleID}, \code{MP_A}, and \code{MP_B}.
+//' @param summary A \code{character} specifying the summary statistic of the sample-wise
+//'        numbers of replicates. Default is \code{'mode'}. Possible summary statistics include:
+//'        \itemize{
+//'           \item \code{none}: Returns an \code{integer} vector containing every
+//'           sample-wise number of replicatees for \code{data}.
+//'           \item \code{mode}: Returns the sample mode.
+//'           \item \code{median}: Returns the sample median.
+//'           \item \code{mean}: Returns the sample mean.
+//'           \item \code{ceiling}: Returns the rounded up (to nearest integer) sample mean.
+//'           \item \code{floor}: Returns the rounded down (to nearest integer) sample mean.
+//'           \item \code{round}: Returns the rounded (to nearest integer) sample mean.
+//'        }
+//' @param invalid_NA A \code{logical} that determines the behavior of the function in response
+//'        to invalid \code{data} or \code{summary} input.
+//'        If \code{TRUE}, the function will return an \code{NA}-value when encountering
+//'        invalid input or computation errors, rather than throwing an error.
+//'        While generally not recommended due to potential masking of issues,
+//'        this may be useful in certain scenarios where uninterrupted execution is desired.
+//' @param silence An \code{integer} that dictates the verbosity level of the console output.
+//'        If \code{silence} is set to a value less than 1, various verbose output,
+//'        including debugging reports, will be displayed depending on the specific
+//'        value of \code{silence}.
+//' 
+//' @description
+//' This function counts the number of replicated measurements done on each sample
+//' within an IVD-MD comparison for either clinical sample (CS) data or
+//' external quality asessment material (EQAM) data. Alternatively, a summary
+//' statistic can be returned to summarize the numbers of replicates across all
+//' samples in the \code{data}.
 //'
-//' @param data A \code{list} or \code{data.table} representing CS data or EQAM data with the \code{list} elements or \code{data.table} columns: \code{SampleID}, \code{MP_A}, and \code{MP_B}.
-//' @param summary A \code{character} specifying the summary statistic of the sample-wise number of replicates. Default is \code{'mode'}. Possible summary statistics include:
-//' \itemize{
-//'   \item{\code{none}: }{Returns a \code{integer vector} containing the sample-wise number of replicates for the input \code{data}.}
-//'   \item{\code{mode}: }{Returns the mode of the sample-wise number of replicates for the input \code{data}.}
-//'   \item{\code{median}: }{Returns the median of the sample-wise number of replicates for the input \code{data}.}
-//'   \item{\code{mean}: }{Returns the arithmetic mean (\code{float} type) calculated from the sample-wise number of replicates present in the input \code{data}.}
-//'   \item{\code{ceiling}: }{Computes and returns the rounded-up (ceiling) value of the arithmetic mean calculated from the sample-wise number of replicates present in the input \code{data}.}
-//'   \item{\code{floor}: }{Computes and returns the rounded-down (floor) value of the arithmetic mean calculated from the sample-wise number of replicates present in the input \code{data}.}
-//'   \item{\code{round}: }{Computes and returns the rounded (nearest integer) value of the arithmetic mean calculated from the sample-wise number of replicates present in the input \code{data}.}
-//' }
-//' @param invalid_NA A \code{logical} that determines the function's behavior in response to invalid \code{data} or \code{summary} input. If set to TRUE, the function will return an NA value when encountering invalid input or computation errors, rather than throwing an error. While generally not recommended due to potential masking of issues, this may be useful in certain scenarios where uninterrupted execution is desired.
-//' @param silence An \code{integer} that dictates the verbosity level of the console output. If \code{silence} is set to a value less than 1, various verbose output, including debugging reports, will be displayed depending on the specific value of \code{silence}.
+//' @details
+//' The function \code{predict_eqa()} hinges on the count of replicates
+//' performed for its \code{data} parameter. When the \code{method} is either
+//' \code{fg} or \code{ols}, it is essential to tally the replicates for both
+//' \code{data} and \code{new_data} inputs. This handy function offers a
+//' streamlined solution. It allows for the direct usage of \code{predict_eqa()}
+//' without requiring manual counting of the sample-wise replicates,
+//' thereby enhancing efficiency and ease of use.
+//' 
+//' Note: If the count of replicates for a particular sample is 0, it will be
+//' removed from the output. 
 //'
-//' @details The function \code{predict_eqa()} hinges on the count of replicates performed for its \code{data} parameter. When the \code{method} is either 'fg' or 'ols', it's essential to tally the replicates for both \code{data} and \code{new_data} inputs. This handy function offers a streamlined solution. It allows for the direct usage of \code{predict_eqa()} without requiring manual counting of the sample-wise replicates, thereby enhancing efficiency and ease of use.
-//'
-//' @return Returns a \code{list} that contains a single element, \code{R_i}. The type of \code{R_i} depends on the value of the \code{summary} parameter. It is typically an integer. However, if \code{summary} is set to 'none', \code{R_i} becomes an integer vector. When \code{summary} is set to 'mean', \code{R_i} is returned as a floating-point number.
+//' @return
+//' Returns a \code{list} that contains a single element, \code{R_i}.
+//' The type of \code{R_i} depends on the \code{summary} parameter.
+//' It is typically an single integer value.
+//' However, if \code{summary} is set to \code{'none'}, \code{R_i} is an
+//' integer vector because it list the number of replicates for each sample.
+//' When \code{summary} is set to \code{'mean'},
+//' \code{R_i} is returned as a \code{double}.
 //'
 //' @examples \dontrun{
 //' library(fasteqa)
@@ -83,9 +129,10 @@ List count_samplewise_replicates(List data, String summary = "mode", bool invali
   // Number of measurements in 'data' after NA values are removed
   int N = SampleID.size();
   // Number of unique samples in 'data' after NA values are removed
-  CharacterVector unique_SampleID = unique(SampleID);
+  CharacterVector unique_SampleID = unique_preserve_order_csr(SampleID);
   int n = unique_SampleID.size();
   IntegerVector R_i(n);
+  
   if(n > N){
     stop("n[%d] (number of unique samples) is larger than N[%d] (number of unique measurements)!", n, N);
   }
@@ -167,17 +214,17 @@ List count_samplewise_replicates(List data, String summary = "mode", bool invali
     return List::create(Named("R_i") = NA_INTEGER);
   }
   else if(summary == "ceiling" || summary == "floor" || summary == "round" || summary == "mean"){
-    float R_mean = mean(R_i);
+    double R_mean = mean(R_i);
     if(summary == "ceiling"){
-      List out = List::create(Named("R_i") = ceilf(R_mean));
+      List out = List::create(Named("R_i") = std::ceil(R_mean));
       return out;
     }
     else if(summary == "floor"){
-      List out = List::create(Named("R_i") = floorf(R_mean));
+      List out = List::create(Named("R_i") = std::floor(R_mean));
       return out;
     }
     else if(summary == "round"){
-      List out = List::create(Named("R_i") = roundf(R_mean));
+      List out = List::create(Named("R_i") = std::round(R_mean));
       return out;
     }
     else{

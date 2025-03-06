@@ -1,3 +1,4 @@
 useDynLib(fasteqa, .registration=TRUE)
 importFrom(Rcpp, evalCpp)
+import(data.table)
 exportPattern("^[[:alpha:]]+")

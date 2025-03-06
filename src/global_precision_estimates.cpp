@@ -1,250 +1,229 @@
 #include <Rcpp.h>
+#include <unordered_set>
 using namespace Rcpp;
 
-//' Calculate imprecision point estimates of measurements in a given MS comparison 
-//' 
-//' @title Calculate imprecision point estimates of measurements in a given MS comparison
+// (*) Helper function for estimating variance
+double estimate_variance_gpe(const std::vector<double>& values) {
+  double sum = 0.0, sq_sum = 0.0;
+  const int n = values.size();
+  
+  for (double value : values) {
+    sum += value;
+    sq_sum += value * value;
+  }
+  
+  double mean = sum / n;
+  return (sq_sum - sum * mean) / (n - 1);
+}
+
+// (**) Helper function for obtaining unique elements maintaining their original order
+CharacterVector unique_preserve_order_gpe(CharacterVector x) {
+  std::unordered_set<std::string> seen;
+  CharacterVector result;
+  
+  for(int i = 0; i < x.length(); i++) {
+    std::string current = as<std::string>(x[i]);
+    if(seen.find(current) == seen.end()) {
+      seen.insert(current);
+      result.push_back(x[i]);
+    }
+  }
+  return result;
+}
+
+//' @title Calculate Repeatability Variability Components for a Particular IVD-MD Comparison
 //' @name global_precision_estimates
 //' 
-//' @param data \code{list} or \code{data table} - Data with elements/columns \code{SampleID}, \code{ReplicateID}, \code{MP_A} and \code{MP_B}
-//' @param silence \code{integer} - Should debugging messages be printed. Default is no
-//'
-//' @description Structure-requirement of \code{data}:
+//' @param data A \code{list} or \code{data.table}. Must contain the following
+//'             variables:
+//'             \itemize{
+//'               \item \code{SampleID: } A \code{character} vector. The sample
+//'                                       identifiers.
+//'               \item \code{ReplicateID: } A \code{character} vector. The
+//'                                          replicate measurement identifiers.
+//'               \item \code{MP_A: } A \code{numeric} vector. The measurements
+//'                                   from IVD-MD \code{MP_A} (response).
+//'               \item \code{MP_B: } A \code{numeric} vector. The measurements
+//'                                   from IVD-MD \code{MP_B} (predictor).
+//'             }
+//'             
+//' @description
+//' Calculate various repeatability components, such as variance, coefficient
+//' of variability and the ratio of variances.
+//' 
+//' @details
+//' Five statistics are estimated. The repeatability variances of \code{MP_A}
+//' and \code{MP_B} are estimated by calculating the \eqn{n} (number of
+//' unique values in \code{SampleID}) sample variances using the \code{numeric}
+//' values in \code{MP_A} and \code{MP_B}. Then we take the mean of the sample
+//' variances to obtain pooled estimated variances for the true repeatability
+//' variances. We denote these estimated pooled variances by \code{Var_A} and
+//' \code{Var_B}, respectively. Using the grand mean of \code{MP_A} and
+//' \code{MP_B} we can then calculate three other statistics, \code{CV_A},
+//' \code{CV_B} and \code{lambda}. Here is a summary the different estimated
+//' statistics:
 //' \itemize{
-//'   \item{\code{SampleID: }}{Must be a character vector}
-//'   \item{\code{ReplicateID: }}{Must be a character vector}
-//'   \item{\code{MP_A: }}{Must be a numeric vector}
-//'   \item{\code{MP_B: }}{Must be a numeric vector}
-//' }
-//'
-//' @details Calculates various global imprecision estimates. To get CVs in percent you need only to multiply the raw CV estimates with 100. Here is a rough explaination of the output list:
-//' \itemize{
-//'   \item{\code{Var_A: }}{Pooled variance of all sample-variances based on MS_A}
-//'   \item{\code{Var_B: }}{Pooled variance of all sample-variances based on MS_B}
-//'   \item{\code{CV_A: }}{Global CV estimate based on Var_A and the grand mean of all measurements from MS_A}
-//'   \item{\code{CV_B: }}{Global CV estimate based on Var_B and the grand mean of all measurements from MS_B}
-//'   \item{\code{lambda: }}{Ratio of pooled variances Var_A and Var_B}
+//'   \item \code{Var_A: } Pooled variance of all samplewise variances based on
+//'                        IVD-MD \code{MP_A}. An estimator for
+//'                        \eqn{\sigma_v^2}. Denote the estimator
+//'                        \eqn{\hat{\sigma}_v^2}
+//'   \item \code{Var_B: } Pooled variance of all samplewise variances based on
+//'                        IVD-MD \code{MP_B}. An estimator for
+//'                        \eqn{\sigma_h^2}. Denote the estimator
+//'                        \eqn{\hat{\sigma}_h^2}
+//'   \item \code{CV_A: } Estimated repeatbility coefficient of variation.
+//'                       calculated by \eqn{\hat{\sigma}_v / \overline{y}},
+//'                       where \eqn{\overline{y}} is the grand sample mean of
+//'                       the values in \code{MP_A}.
+//'   \item \code{CV_B: } Estimated repeatbility coefficient of variation.
+//'                       calculated by \eqn{\hat{\sigma}_h / \overline{x}},
+//'                       where \eqn{\overline{x}} is the grand sample mean of
+//'                       the values in \code{MP_B}.
+//'   \item \code{lambda: } Estimated repeatbility variance ratio. 
+//'                         calculated by
+//'                         \eqn{\hat{\sigma}_v^2 / \hat{\sigma}_h^2}.
 //' }
 //' 
+//' By default, \code{CV_A} and \code{CV_B} are represented as a decimal
+//' number. These values can also be represented as percentages, and to
+//' covert to percentages, one should multiply their raw values with \code{100}.
+//' 
+//' Note: If one uses log-transformed \code{data}, the interpretation of
+//' \code{CV_A} and \code{CV_B} may change, depending on the application.
+//' In the log-transformation case, the square-root of \code{Var_A} and
+//' \code{Var_B} have a similar interpretation as \code{CV_A} and \code{CV_B}
+//' calculated using raw \code{data}.
+//' 
 //'
-//' @return \code{list} - with point imprecision estimates \code{Var_A}, \code{Var_B}, \code{CV_A}, \code{CV_B} and \code{lambda}
-//' @examples \dontrun{
-//'   library(fasteqa)
-//'   data <- simulate_eqa_data(list(n = 25, R = 3, cvx = 0.02, cvy = 0.3))
-//'   data$SampleID <- as.character(data$SampleID)
-//'   data$ReplicateID <- as.character(data$ReplicateID)
-//'   global_prcision_estimates(data = data)
-//' }
+//' @return
+//' A \code{list} of length five. Each element contains the an estimated
+//' statistic. See details for information on each of them.
+//' 
+//' @examples
+//' library(fasteqa)
+//' # Calculate imprecision estimates
+//' repeatability_statistics <- global_precision_estimates(test_data)
+//' 
+//' # Output
+//' print(repeatability_statistics)
+//' 
+//' # Convert CV_A and CV_B to percentages
+//' repeatability_statistics$CV_A <- repeatability_statistics$CV_A * 100
+//' repeatability_statistics$CV_B <- repeatability_statistics$CV_B * 100
+//' 
+//' # Round results (two decimals)
+//' repeatability_statistics <- lapply(X = repeatability_statistics,
+//'                                    FUN = round,
+//'                                    digits = 2L)
+//' 
+//' # Convert to data.frame
+//' repeatability_statistics <- as.data.frame(repeatability_statistics)
+//' 
+//' print(repeatability_statistics)
+//' 
 
 
 // [[Rcpp::export]]
-List global_precision_estimates(List data, int silence = 1) {
+List global_precision_estimates(List data) {
+  
+  // Extract data columns
   CharacterVector SampleID = data["SampleID"];
-  CharacterVector ReplicateID = data["ReplicateID"];
-  NumericVector MS_A = data["MP_A"];
-  NumericVector MS_B = data["MP_B"];
-  CharacterVector summary_SampleID = unique(SampleID);
-  int n = summary_SampleID.size();
-  int N = SampleID.size();
-  NumericVector ith_var_MS_A(n);
-  NumericVector ith_var_MS_B(n);
-  int counter = 0;
-  int replicate_number_requirement = 2;
+  NumericVector MP_A = data["MP_A"];
+  NumericVector MP_B = data["MP_B"];
   
-  for(int i = 0; i < n; ++i){
-    // Extract necessary information on the ith sample (indices and number of replicated meas)
-    CharacterVector ith_sample(1);
-    ith_sample[0] = summary_SampleID[i];
-    LogicalVector sample_match = in(SampleID, ith_sample);
-    int index_vector_length = sum(sample_match);
-    NumericVector index_vector(index_vector_length);
-    int relevant_ind = 0;
-    for(int j = 0; j < N; ++j){
-      if(sample_match[j] == 1){
-        index_vector[relevant_ind] = j;
-        ++relevant_ind;
+  // Get unique samples and initialize result vectors
+  CharacterVector summary_SampleID = unique_preserve_order_gpe(SampleID);
+  const int n = summary_SampleID.size();
+  const int N = SampleID.size();
+  NumericVector ith_var_MP_A(n, NA_REAL);
+  NumericVector ith_var_MP_B(n, NA_REAL);
+  const int replicate_number_requirement = 2;
+  
+  // Create hash map for faster sample lookup
+  std::unordered_map<String, std::vector<int>> sample_indices;
+  for (int i = 0; i < N; ++i) {
+    sample_indices[String(SampleID[i])].push_back(i);
+  }
+  
+  // Calculate variances for each sample
+  for (int i = 0; i < n; ++i) {
+    String current_sample = String(summary_SampleID[i]);
+    const std::vector<int>& indices = sample_indices[current_sample];
+    
+    std::vector<double> valid_measurements_A;
+    std::vector<double> valid_measurements_B;
+    valid_measurements_A.reserve(indices.size());
+    valid_measurements_B.reserve(indices.size());
+    
+    // Collect valid measurements
+    for (int idx : indices) {
+      if (!ISNAN(MP_A[idx])) {
+        valid_measurements_A.push_back(MP_A[idx]);
+      }
+      if (!ISNAN(MP_B[idx])) {
+        valid_measurements_B.push_back(MP_B[idx]);
       }
     }
     
-    // Create empty vectors to be filled with measurements of the ith sample
-    NumericVector ith_sample_measurements_A(index_vector_length);
-    NumericVector ith_sample_measurements_B(index_vector_length);
-    
-    // Checks for NA-values
-    // If ISNAN results in 1 (i.e., NA-value or NAN-value) let the kth measurement be zero
-    // Otherwise, the kth measurement will be the kth measurement of either MS_A or MS_B
-    for(int k = 0; k < index_vector_length; ++k){
-      bool na_check_A = ISNAN(MS_A[index_vector[k]]);
-      bool na_check_B = ISNAN(MS_B[index_vector[k]]);
-      if(!na_check_A){
-        ith_sample_measurements_A[k] = MS_A[index_vector[k]];
-      }
-      else if(na_check_A){
-        ith_sample_measurements_A[k] = 0;
-      }
-      if(!na_check_B){
-        ith_sample_measurements_B[k] = MS_B[index_vector[k]];  
-      }
-      else if(!na_check_B){
-        ith_sample_measurements_B[k] = 0;  
-      }
+    // Calculate variances if enough replicates
+    if (valid_measurements_A.size() >= replicate_number_requirement) {
+      ith_var_MP_A[i] = estimate_variance_gpe(valid_measurements_A);
     }
-    
-    // Create NA-search vectors with zeros and ones matching with ith sample of MS_A and MS_B
-    IntegerVector NA_search_A(index_vector_length);
-    IntegerVector NA_search_B(index_vector_length);
-    
-    // Recall: ith_sample_measurements_*[k] = 1 signify that the value is a NA-value
-    // NA_search_* will return 0 if ith_sample_measurements_*[k] = 0, and 1 otherwise 
-    for(int k = 0; k < index_vector_length; ++k){
-      if(ith_sample_measurements_A[k] == 0){
-        NA_search_A[k] = 0;
-      }
-      if(ith_sample_measurements_A[k] > 0){
-        NA_search_A[k] = 1;
-      }
-      if(ith_sample_measurements_B[k] == 0){
-        NA_search_B[k] = 0;
-      }
-      if(ith_sample_measurements_B[k] > 0){
-        NA_search_B[k] = 1;
-      }
-    }
-    
-    // Aligning vectors making it easier to delete NA-values
-    ith_sample_measurements_A = ith_sample_measurements_A.sort();
-    ith_sample_measurements_B = ith_sample_measurements_B.sort();
-    NA_search_A = NA_search_A.sort();
-    NA_search_B = NA_search_B.sort();
-    
-    // Step-wise check for NA values at vector start and delete if it is a NA-value for MS_A
-    for(int k = 0; k < index_vector_length; ++k){
-      if(NA_search_A[k] == 0){
-        ith_sample_measurements_A.erase(0); 
-      }
-    }
-    
-    // Step-wise check for NA values at vector start and delete if it is a NA-value for MS_A
-    for(int k = 0; k < index_vector_length; ++k){
-      if(NA_search_B[k] == 0){
-        ith_sample_measurements_B.erase(0);
-      }
-    }
-    
-    // Checks if the number of replicates meets the conditions of the relevant summary function
-    // If met, the summary function is applied. Otherwise, the result will be a NA-value
-    if(ith_sample_measurements_A.size() < replicate_number_requirement){
-      ith_var_MS_A[counter] = NA_REAL;  
-    }
-    if(ith_sample_measurements_A.size() >= replicate_number_requirement){
-      ith_var_MS_A[counter] = var(ith_sample_measurements_A);
-    }
-    if(ith_sample_measurements_B.size() < replicate_number_requirement){
-      ith_var_MS_B[counter] = NA_REAL;
-    }
-    if(ith_sample_measurements_B.size() >= replicate_number_requirement){
-      ith_var_MS_B[counter] = var(ith_sample_measurements_B);  
-    }
-    ++counter;
-  }
-  
-  int effective_N_A = N;
-  int effective_n_A = n;
-  int effective_N_B = N;
-  int effective_n_B = n;
-  float var_MS_A = 0;
-  float var_MS_B = 0;
-  
-  for(int j = 0; j < n; ++j){
-    bool na_check_A = ISNAN(ith_var_MS_A[j]);
-    bool na_check_B = ISNAN(ith_var_MS_B[j]);
-    if(!na_check_A){
-      var_MS_A += ith_var_MS_A[j];
-    }
-    if(na_check_A){
-      effective_n_A = effective_n_A - 1;
-    }
-    if(!na_check_B){
-      var_MS_B += ith_var_MS_B[j];
-    }
-    if(na_check_B){
-      effective_n_B = effective_n_B - 1;
+    if (valid_measurements_B.size() >= replicate_number_requirement) {
+      ith_var_MP_B[i] = estimate_variance_gpe(valid_measurements_B);
     }
   }
   
-  if(effective_n_A >= 1){
-    var_MS_A = var_MS_A / effective_n_A; 
-  }
-  else if(effective_n_A < 1){
-    var_MS_A = NA_REAL;
-  }
-  if(effective_n_B >= 1){
-    var_MS_B = var_MS_B / effective_n_B;
-  }
-  else if(effective_n_B <= 0){
-    var_MS_B = NA_REAL;
-  }
-  float lambda = 0;
-  bool na_check_A = ISNAN(var_MS_A);
-  bool na_check_B = ISNAN(var_MS_B);
-  if((!na_check_A) & !(na_check_B)){
-    lambda = var_MS_A / var_MS_B;  
-  }
-  if(na_check_A | na_check_B){
-    lambda = NA_REAL;
-  }
+  // Calculate global statistics
+  double var_MP_A = 0, var_MP_B = 0;
+  int effective_n_A = 0, effective_n_B = 0;
   
-  float mean_MS_A = 0;
-  float mean_MS_B = 0;
-  
-  for(int i = 0; i < N; ++i){
-    bool na_check_A = ISNAN(MS_A[i]);
-    bool na_check_B = ISNAN(MS_B[i]);
-    if(!na_check_A){
-      mean_MS_A += MS_A[i];
+  for (int i = 0; i < n; ++i) {
+    if (!ISNAN(ith_var_MP_A[i])) {
+      var_MP_A += ith_var_MP_A[i];
+      effective_n_A++;
     }
-    if(na_check_A){
-      effective_N_A = effective_N_A - 1;
-    }
-    if(!na_check_B){
-      mean_MS_B += MS_B[i];
-    }
-    if(na_check_B){
-      effective_N_B = effective_N_B - 1;
+    if (!ISNAN(ith_var_MP_B[i])) {
+      var_MP_B += ith_var_MP_B[i];
+      effective_n_B++;
     }
   }
-  if(effective_N_A >= 1){
-    mean_MS_A = mean_MS_A / effective_N_A;  
-  }
-  if(effective_N_A < 1){
-    mean_MS_A = NA_REAL;
-  }
-  if(effective_N_B >= 1){
-    mean_MS_B = mean_MS_B / effective_N_B;
-  }
-  if(effective_N_B < 1){
-    mean_MS_B = NA_REAL;  
+  
+  var_MP_A = effective_n_A > 0 ? var_MP_A / effective_n_A : NA_REAL;
+  var_MP_B = effective_n_B > 0 ? var_MP_B / effective_n_B : NA_REAL;
+  
+  // Calculate means
+  double mean_MP_A = 0, mean_MP_B = 0;
+  int valid_count_A = 0, valid_count_B = 0;
+  
+  for (int i = 0; i < N; ++i) {
+    if (!ISNAN(MP_A[i])) {
+      mean_MP_A += MP_A[i];
+      valid_count_A++;
+    }
+    if (!ISNAN(MP_B[i])) {
+      mean_MP_B += MP_B[i];
+      valid_count_B++;
+    }
   }
   
-  float cv_MS_A = 0;
-  float cv_MS_B = 0;
+  mean_MP_A = valid_count_A > 0 ? mean_MP_A / valid_count_A : NA_REAL;
+  mean_MP_B = valid_count_B > 0 ? mean_MP_B / valid_count_B : NA_REAL;
   
-  if(effective_N_A >= 1 and effective_n_A >= 1){
-    cv_MS_A = sqrt(var_MS_A) / mean_MS_A;
-  }
-  if(effective_N_A < 1 or effective_n_A < 1){
-    cv_MS_A = NA_REAL;
-  }
-  if(effective_N_B >= 1 and effective_n_B >= 1){
-    cv_MS_B = sqrt(var_MS_B) / mean_MS_B;
-  }
-  if(effective_N_B < 1 or effective_n_B < 1){
-    cv_MS_B = NA_REAL;
-  }
+  // Calculate final statistics
+  double cv_MP_A = (!ISNAN(var_MP_A) && !ISNAN(mean_MP_A) && mean_MP_A != 0) ?
+  sqrt(var_MP_A) / mean_MP_A : NA_REAL;
+  double cv_MP_B = (!ISNAN(var_MP_B) && !ISNAN(mean_MP_B) && mean_MP_B != 0) ?
+  sqrt(var_MP_B) / mean_MP_B : NA_REAL;
+  double lambda = (!ISNAN(var_MP_A) && !ISNAN(var_MP_B) && var_MP_B != 0) ?
+  var_MP_A / var_MP_B : NA_REAL;
   
-  List out = List::create(Named("Var_A") = var_MS_A, Named("Var_B") = var_MS_B, Named("CV_A") = cv_MS_A, Named("CV_B") = cv_MS_B, Named("lambda") = lambda);
-  return out; 
+  return List::create(
+    Named("Var_A") = var_MP_A,
+    Named("Var_B") = var_MP_B,
+    Named("CV_A") = cv_MP_A,
+    Named("CV_B") = cv_MP_B,
+    Named("lambda") = lambda
+  );
 }
-  
-
 

@@ -2,53 +2,141 @@
 % Please edit documentation in R/RcppExports.R
 \name{simulate_eqa_data}
 \alias{simulate_eqa_data}
-\title{Simulation of EQA data based on study design and potential differences in non-selectivity}
+\title{Simulation of External Quality Assessment (EQA) Data (Deprecated)}
 \arguments{
-\item{parameters}{A \code{list} of parameters used to simulate the EQA data. You must at least specify one parameter for this function to run. Except that one mandatory parameter, you may optionally choose the remaining of the parameters. These are the optimal parameters that you may include into the list:
+\item{parameters}{A \code{list} of parameters used to simulate the EQA data.
+       You must at least specify one parameter for this function to run.
+       Except that one mandatory parameter, you may optionally choose the
+       remaining of the parameters. These are the optimal parameters that you may include into the list:
 \itemize{
-  \item{\code{n: }}{  The number of clinical samples}
-  \item{\code{R: }}{The number of replicates on each sample}
-  \item{\code{cvx: }}{The analytical CV of x measurements}
-  \item{\code{cvy: }}{The analytical CV of y measurements}
-  \item{\code{cil: }}{The lower range of the concentration interval}
-  \item{\code{ciu: }}{The upper range of the concentration interval}
-  \item{\code{dist: }}{The distribution to simulate latent variables from. Possbile choices include 'unif' (uniform distribution, default), 'norm' (normal distribution) , 'lst' (location-scale t-distribution), 'lnorm' (log-normal distribution)}
-  \item{\code{df_tau: }}{The degrees of freedom for the 'lst' distribution if the distribution of latent variables are location-scale t-distributed ('lst'). Defaults to 5 if not otherwise is specified.}
-  \item{\code{eta: }}{The heteroscedasticity factor}
-  \item{\code{eta0: }}{The proportion of base MS standard deviations}
-  \item{\code{qpos: }}{Position of systematic differences in non-selectivity. 0 signify lower range and 1 signify upper range}
-  \item{\code{qran: }}{Interquantile range where systematic differences in non-selectivity should have its effect}
-  \item{\code{prop: }}{average proportion of clinical samples affected by random differences in non-selectivity}
-  \item{\code{mmax: }}{The maximum relocation magnitude in number of analytical SDs of y measurements. This assumes either prop or qpos and qran to be specified as well}
-  \item{\code{b0: }}{For systematic linear DINS between IVD-MDs. Intercept. Defaults to 0.}
-  \item{\code{b1: }}{For systematic linear DINS between IVD-MDs. Slope. Defaults to 1.}
-  \item{\code{c0: }}{For systematic linear non-selectivity in IVD-MD 1. Intercept. Defaults to 0.}
-  \item{\code{c1: }}{For systematic linear non-selectivity in IVD-MD 1. Slope. Defaults to 1.}
-  \item{\code{error_dist: }}{The distribution to simulate measurement error components from. Possible choices include 'norm' (normal distribution, default) and 'lt' (location t-distribution)}
-  \item{\code{dfx: }}{The degrees of freedom for the measurement error components in IVD-MD 1 if error_dist = 'lt'. Defaults to 5 if not otherwise is specified.}
-  \item{\code{dfy: }}{The degrees of freedom for the measurement error components in IVD-MD 2 if error_dist = 'lt'. Defaults to 5 if not otherwise is specified.}
-  \item{\code{md_method: }}{Method for simulation missing data. Possible choices include 'none' (no missing data is simulated, default), 'mar' (missing at random), 'mnar' (missing not at random) and 'marmnar' (missing both at random and not at random)}
-  \item{\code{mar_prob: }}{The probability (value between 0 and 1) of having a missing measurement. Only relevant if \code{md_method} is 'mar' or 'marmnar'. If not specified, but \code{md_method} = 'mar' or \code{md_method} = 'marmnar', it defaults to 0.05.}
-  \item{\code{mnar_threshold: }}{The lower bound threshold (a real value) for when a measurement should be missing. Only relevant if \code{md_method} is 'mnar' or 'marmnar'. If not specified, but \code{md_method} = 'mnar' or \code{md_method} = 'marmnar', it defaults to \code{cil}. Alternatively, if not specified, but \code{md_method} = 'mnar0' or \code{md_method} = 'marmnar0', it defaults to 0.}
+  \item \code{n: } The number of clinical samples
+  \item \code{R: } The number of replicates on each sample
+  \item \code{cvx: } The analytical CV of x measurements
+  \item \code{cvy: } The analytical CV of y measurements
+  \item \code{cil: } The lower range of the concentration interval
+  \item \code{ciu: } The upper range of the concentration interval
+  \item \code{dist: } The distribution to simulate latent variables from.
+                      Possbile choices include 'unif' 
+                      (uniform distribution, default),
+                      'norm' (normal distribution) ,
+                      'lst' (location-scale student t-distribution),
+                      'lnorm' (log-normal distribution)
+  \item \code{df_tau: } The degrees of freedom for the 'lst' distribution
+                        if the distribution of latent variables are
+                        location-scale student t-distributed ('lst').
+                        Defaults to 5 if not otherwise is specified.
+  \item \code{eta: } The heteroscedasticity factor
+  \item \code{eta0: } The proportion of "base standard deviation"
+  \item \code{qpos: } Position of systematic differences in
+                      non-selectivity. 0 signify lower concentration
+                      interval and 1 signify upper concentration interval.
+  \item \code{qran: } Interquantile range where systematic differences in
+                      non-selectivity should have its effect
+  \item \code{prop: } average proportion of clinical samples affected by
+                      random differences in non-selectivity
+  \item \code{mmax: } The maximum relocation magnitude multiplier.
+  \item \code{b0: } For systematic linear bias between IVD-MDs.
+                    The intercept. This defaults to 0.
+  \item \code{b1: } For systematic linear DINS between IVD-MDs.
+                    The slope. This defaults to 1.
+  \item \code{c0: } For systematic linear non-selectivity in IVD-MD one.
+                    The intercept. This defaults to 0.
+  \item \code{c1: } For systematic linear non-selectivity in IVD-MD one.
+                    The slope. This defaults to 1.
+  \item \code{error_dist: } The distribution to simulate measurement error
+                            components from. Possible choices include
+                            'norm' (normal distribution, default) and 'lt'
+                            (location student t-distribution)
+  \item \code{dfx: } The degrees of freedom for the measurement error
+                     components in IVD-MD one if \code{error_dist = 'lt'}.
+                     Defaults to 5 if not otherwise is specified.
+  \item \code{dfy: } The degrees of freedom for the measurement error
+                     components in IVD-MD two if \code{error_dist = 'lt'}.
+                     Defaults to 5 if not otherwise is specified.
+  \item \code{md_method: } Method for simulation missing data. Possible
+                           choices include 'none'
+                           (no missing data is simulated, default),
+                           'mar' (Missing at Random),
+                           'mnar' (Missing Not at Random) and 
+                           'marmnar' (Missing systematically and randomly)
+  \item \code{mar_prob: } The probability (value between 0 and 1) of having
+                          a missing measurement. Only relevant if
+                          \code{md_method = 'mar'} or 
+                          \code{md_method = 'marmnar'}. If not specified,
+                          but \code{md_method  = 'mar'} or
+                          \code{md_method = 'marmnar'}, it defaults to 0.05.
+  \item \code{mnar_threshold: } The lower bound threshold (a real value)
+                                for when a measurement should be missing.
+                                Only relevant if \code{md_method = 'mnar'}
+                                or \code{md_method = 'marmnar'}. If not
+                                specified, but \code{md_method = 'mnar'} or
+                                \code{md_method = 'marmnar'}, it defaults
+                                to \code{cil}. Alternatively,
+                                if not specified,
+                                but \code{md_method = 'mnar0'} or
+                                \code{md_method = 'marmnar0'}, it defaults
+                                to 0.
   
 }}
 
-\item{silence}{\code{Integer} should temporary calculation results be printed? This may be useful for debugging or strange curiosity. \code{silence = 1} signify that printing will be suppressed, which is the default. \code{silence = 0} allows such printing}
+\item{silence}{\code{Integer} should temporary calculation results be
+printed? This may be useful for debugging or strange curiosity.
+\code{silence = 1} signify that printing will be suppressed,
+which is the default. \code{silence = 0} allows such printing.}
 }
 \value{
-A list where each list element is a column of the generated EQA data
+A \code{list} of length 4:
+\itemize{
+  \item \code{SampleID:} An \code{integer} vector. Sample identifiers.
+  \item \code{ReplicateID:} An \code{integer} vector. Replicate identifiers.
+  \item \code{MP_A:} An \code{numeric} vector. Simulated measurements from
+                     one of the IVD-MDs in comparison.
+  \item \code{MP_B:} An \code{numeric} vector. Simulated measurements from
+                     the other IVD-MD in comparison.
+}
 }
 \description{
-Simulates a data set with n x R rows, and four columns. The two first columns are the base ID columns (\code{SampleID} and \code{ReplicateID}). The remaining columns are numeric columns holding measurement results from the two IVD-MDs in comparison (denoted 'MP_A' (y) and 'MP_B' (x)).
-             The form of the simulated data depends greatly on which parameters are specified in the the \code{parameters} argument.
+(Deprecated) Simulates a dataset with at most n x R rows measurements.
 }
 \details{
-Simulation of EQA data based on study design and potential differences in non-selectivity
+(Deprecated) Simulates method comparison data for \eqn{\leq} \code{n}
+samples (e.g., clinical samples, pools, external quality assessment
+samples, reference material samples), where each sample is measured
+\eqn{\leq} \code{R} times (replicated measurements). In theory, we simulate
+\eqn{(x_{ir}, y_{ir})} from
 
-Simulates method comparison data for \code{n} samples (e.g., clinical samples, pools, external quality assessment samples, reference material samples), where each sample is measured \code{R} times (replicated measurements). In theory, we simulate from (x_ir, y_ir) where x_ir = f(tau_i) + h_ir and y_ir = g(f(tau_i)) + v_ir.
-         The form of f is specified through parameters \code{c0} and \code{c1}, whereas g is specified through numerous parameters such as \code{b0}, \code{b1}, \code{qpos}, \code{qran}, \code{mmax}, \code{prop}. tau_i is modelled through \code{cil}, \code{ciu}, \code{dist} and \code{df_tau}.
-         h_ir and v_ir are measurement error components modelled through \code{cvx}, \code{cvy}. \code{cvx}, \code{cvy} can be functions of \code{error_dist}, \code{dfx}, \code{dfy}, \code{eta} and \code{eta0}. 
-         In order to convert the outputted list to a table, use either \code{as.data.frame()}, \code{as.data.table()}, \code{as.tibble()}. The most efficient way to convert is \code{setDT()} from the \code{data.table} package.
+\eqn{x_{ir} = f(\xi_i) + h_{ir}, \newline
+     y_{ir} = g(f(\xi_i)) + v_{ir}, \newline
+     \tau_i = g(f(\xi_i)) = f(\xi_i) + e_{i}}.
+
+If \eqn{f} is linear in \eqn{\xi_i}, we have that
+\eqn{\tau_i = f(\xi_i) = c_0 + c_1 \cdot \xi_i + e_{i}}.
+We generally do not care much about the shape of \eqn{f(\xi_i)}.
+We are more interested in the values \eqn{\tau_i} and \eqn{g}. Assuming
+that \eqn{g} is linear, we have that
+\eqn{g(\tau_i) = \beta_0 + \beta_1 \cdot \tau_i + e_{i}}.
+Thus, we simulate \eqn{(x_{ir}, y_{ir})} from
+
+\eqn{x_{ir} = \tau_i + h_{ir}, \newline
+     y_{ir} = g(\tau_i) + v_{ir}, \newline
+     g(\tau_i) = \beta_0 + \beta_1 \cdot \tau_i + e_{i}}.
+
+The form of \eqn{f} is specified through parameters \code{c0} and
+\code{c1}, whereas \eqn{g} is specified through numerous parameters such as
+\code{b0}, \code{b1}, \code{qpos}, \code{qran}, \code{mmax}, \code{prop}.
+The latter four parameters influence the random variable \eqn{e_{i}}.
+
+\eqn{\tau_i} is modelled through \code{cil}, \code{ciu}, \code{dist} and
+\code{df_tau}. \eqn{h_{ir}} and \eqn{v_{ir}} are measurement error
+components modelled through \code{cvx} and \code{cvy}. These coefficients
+of variation, can be functions of \code{error_dist}, \code{dfx},
+\code{dfy}, \code{eta} and \code{eta0}. 
+In order to convert the outputted \code{list} to a data frame format,
+use either \code{as.data.frame()}, \code{as.data.table()},
+\code{as.tibble()}. The most efficient way 
+
+This function is deprecated. Use \code{simulate_eqa_data_new()} instead.
+It is kept to allow for reproducibility for some research.
 }
 \examples{
 \dontrun{

@@ -4,9 +4,11 @@
 \alias{leave_one_out}
 \title{Leave-one-out on clustered EQA clinical sample data}
 \arguments{
-\item{data}{\code{List} or \code{data table} - Data with list elements or data table columns with names \code{SampleID}, \code{ReplicateID}, \code{MP_A} and \code{MP_B}. \code{SampleID} and \code{ReplicateID} must be of character type for the function to operate correctly}
+\item{data}{A \code{list} or \code{data.table}. Must contain
+\code{SampleID}, \code{ReplicateID}, \code{MP_A} and \code{MP_B}.}
 
-\item{loo_id}{Integer - Which of the samples of \code{SampleID} should be left out. Default value is 1}
+\item{loo_id}{An \code{integer}. The \code{SampleID} that is left out.
+Default value is \code{1}.}
 }
 \value{
 A \code{list} containing the original data, but without the sample id corresponding to the given \code{loo_id}
@@ -15,14 +17,10 @@ A \code{list} containing the original data, but without the sample id correspond
 Needed to calculate jack knife estimates of a parameter, that is required when using \code{BCa_bootstrap_ci()}. Alternatively one could use the Jack knife estimates to calculate standard error or bias of the estimator of relevance
 }
 \details{
-Leave-one-out on clustered EQA clinical sample data
-
 loo_ids can not be vectorized directly in R. Use \code{sapply()} or \code{replicate()} to leave out sample IDs one by one
 }
 \examples{
-\dontrun{
-  library(commutability.selectivity)
-  data <- sdwdnsp2()
-  loo_data <- leave_one_out(data, loo_id = 5)
-}
+# Get data without the fifth sample
+print(as.data.frame(leave_one_out(test_data, 5L)))
+
 }

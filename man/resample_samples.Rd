@@ -2,29 +2,26 @@
 % Please edit documentation in R/RcppExports.R
 \name{resample_samples}
 \alias{resample_samples}
-\title{Resample clustered EQA clinical sample data}
+\title{Resample Clustered Data}
 \arguments{
-\item{data}{A list or a data table with elements/columns \code{SampleID}, \code{ReplicateID}, \code{MP_A} and \code{MP_B}. \code{SampleID} and \code{ReplicateID} must be of character type for the function to operate correctly}
-
-\item{silence}{An integer that controls the progress reports outputted for debugging and further examination of the command. \code{silence = -1} or \code{silence = 0} signify that progress reports should be printed. Default is \code{silence = 1} which suppresses all printing}
+\item{data}{A \code{list} or a \code{data.table}. Must contain \code{SampleID},
+\code{ReplicateID}, \code{MP_A} and \code{MP_B}. The ID variables \code{SampleID}
+and \code{ReplicateID} must be of character type for the function to operate correctly.}
 }
 \value{
-A list containing the resampled EQA clinical sample data. Use \code{setDT()} for maximum efficiency if needed to convert the resampled data to a data table
+A \code{list} containing the resampled data.
 }
 \description{
-In order to construct bootstrap confidence intervals and do inference on a set of population parameters where the underlying distribution is complex, will require resample of clustered data. This function is both efficient and does its job, but at a cost of a strict input requirement
+Resample Clustered Data
 }
 \details{
-Resample clustered EQA clinical sample data
-
-\code{resample_samples()} is a very efficient algorithm to resample EQA. Combine with \code{Estimatek()} to resample k or combine with \code{CharacterEstimatePrecision()} to resample variability measures such as CVs and variances. May also be combined with other functions
+This function is a very efficient method to resample clinical sample data on sample-level.
+It is convenient to combine this function with \code{fasteqa} functions such as
+\itemize{
+  \item \code{global_precision_estimates()} to estimate bootstrap imprecision confidence intervals
+  \item \code{estimate_zeta()} to estimate bootstrap zeta confidence intervals
+}
 }
 \examples{
-\dontrun{
-  library(commutability.selectivity)
-  data <- sdwdnsp2()
-  data$SampleID <- as.character(data$SampleID)
-  data$ReplicateID <- as.character(data$ReplicateID)
-  resampled_data <- resample_samples(data)
-}
+print(1)
 }

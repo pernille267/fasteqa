@@ -4,30 +4,186 @@
 \alias{merge_results}
 \title{Merge all computations efficiently into one object}
 \arguments{
-\item{pb_data}{\code{list} or \code{data table} - Prediction band data, which must at least contain \code{comparison}, \code{predictor}, \code{prediction}, \code{lwr} and \code{upr}}
+\item{pb_data}{A \code{list} or \code{data.table}. This should contain the
+prediction band data. Estimated prediction band data is a collection
+of estimated pointwise prediction intervals evaluated along a given
+grid of predictor values. Must contain:
+\itemize{
+   \item \code{comparison: } A \code{character} vector. The
+                             comparison identifiers. Typically on
+                             the form MP_A - MP_B.
+   \item \code{predictor: } A \code{numeric} vector. The \code{MP_B}
+                            values used to predict the \code{MP_A}
+                            values based on the model.
+   \item \code{prediction: } A \code{numeric} vector. The predicted
+                             \code{MP_A} values based on the
+                             predictor values \code{MP_B}.
+   \item \code{lwr: } A \code{numeric} vector. The lower bound of the
+                      pointwise prediction intervals.
+   \item \code{upr: } A \code{numeric} vector. The upper bound of the
+                      pointwise prediction intervals.
+}}
 
-\item{ce_data}{\code{list} or \code{data table} - Commutability evaluation data for evaluated material, which must at least contain \code{comparison}, \code{SampleID}, \code{MP_B}, \code{MP_A}, \code{prediction}, \code{lwr}, \code{upr} and \code{inside}}
+\item{ce_data}{A \code{list} or \code{data.table}. This should contain the
+estimated prediction intervals for evaluated data along with
+observed values of \code{MP_B} and \code{MP_B}.
+Must contain:
+\itemize{
+   \item \code{comparison: } A \code{character} vector. The
+                             comparison identifiers.
+                             Typically on the form
+                             \code{'MP_A - MP_B'}.
+   \item \code{SampleID: } A \code{character} vector. The
+                           sample identifiers for the
+                           evaluated samples.
+   \item \code{MP_A: } A \code{numeric} vector. The observed
+                       measurement results from IVD-MD
+                       \code{MP_A} (response).
+   \item \code{MP_B: } A \code{numeric} vector. The observed
+                       measurement results from IVD-MD
+                       \code{MP_B} (predictor).
+   \item \code{prediction: } A \code{numeric} vector. The
+                             predicted values of \code{MP_A}
+                             based on \code{MP_B}.
+   \item \code{lwr: } A \code{numeric} vector. The lower
+                      bound of the prediction intervals of
+                      \code{MP_A}.
+   \item \code{upr: } A \code{numeric} vector. The upper
+                      bound of the prediction intervals of
+                      \code{MP_A}.
+   \item \code{inside: } An \code{integer} vector. Should be
+                         \code{1} if \code{MP_A}
+                         \eqn{\in [\mathrm{lwr},
+                         \mathrm{upr}]}, and \code{0}
+                         otherwise.
+}}
 
-\item{zeta_data}{\code{list} or \code{data table} - Zeta estimates, which must at least contain \code{comparison}, \code{zeta}, \code{lwr}, \code{upr}, \code{zeta_critical}, \code{zeta_conclusion}}
+\item{zeta_data}{A \code{list} or \code{data.table}. This should contain
+relevant statistics of \eqn{\hat{\zeta}}. Must contain:
+\itemize{
+   \item \code{comparison: } A \code{character} vector.
+                             The comparison identifiers.
+                             Typically on the form
+                             \code{'MP_A - MP_B'}.
+   \item \code{zeta: } A \code{numeric} vector. The
+                       point estimates of \eqn{\zeta}.
+                       Calculated using
+                       \code{estimate_zeta()} or
+                       \code{estimate_zeta_ss()}
+                       (\code{smooth.commutability}
+                       package).
+   \item \code{lwr: } A \code{numeric} vector. The lower
+                      bound of an estimated confidence
+                      interval for \eqn{\hat{\zeta}}.
+   \item \code{upr: } A \code{numeric} vector. The upper
+                      bound of an estimated confidence
+                      interval for \eqn{\hat{\zeta}}.
+   \item \code{zeta_critical: } A \code{numeric} vector.
+                                The largest value
+                                \eqn{\hat{\zeta}} can take
+                                to conclude that a
+                                particular IVD-MD
+                                comparison hav acceptable
+                                differences in 
+                                non-selectivity.
+   \item \code{zeta_conclusion: } An \code{integer} vector.
+                                  Should be \code{1} if
+                                  \code{zeta} \eqn{\geq}
+                                  \code{zeta_critical} and
+                                  \code{0} otherwise.
+}}
 
-\item{imprecision_data}{\code{list} or \code{data table} - global imprecision estimates, which must at least contain \code{comparison}, \code{CV_A}, \code{CV_A_lwr}, \code{CV_A_upr}, \code{CV_B}, \code{CV_B_lwr}, \code{CV_B_upr}, \code{lambda}, \code{lambda_lwr} and \code{lambda_upr}. This one may be omitted, if one is uninterested in viewing the imprecision estimates}
+\item{imprecision_data}{A \code{list} or \code{data.table}. Repeatability
+uncertainty estimates and corresponding confidence
+intervals. Must contain:
+\itemize{
+    \item \code{comparison: } A \code{character}
+    vector. The comparison identifiers. Typically
+    on the form \code{'MP_A - MP_B'}.
+    \item \code{CV_A: } A \code{numeric} vector.
+    The point estimates of the coefficient of
+    variability for the repeatability in
+    \code{MP_A}.
+    \item \code{CV_A_lwr: } A \code{numeric} vector.
+    The lower bounds of a confidence interval of
+    the coefficient of variability for the
+    repeatability in \code{MP_A}.
+    \item \code{CV_A_upr: } A \code{numeric} vector.
+    The upper bounds of a confidence interval of
+    the coefficient of variability for the
+    repeatability in \code{MP_A}.
+    \item \code{CV_B: } A \code{numeric} vector.
+    The point estimates of the coefficient of
+    variability for the repeatability in
+    \code{MP_B}.
+    \item \code{CV_B_lwr: } A \code{numeric} vector.
+    The lower bounds of a confidence interval of
+    the coefficient of variability for the
+    repeatability in \code{MP_B}.
+    \item \code{CV_B_upr: } A \code{numeric} vector.
+    The upper bounds of a confidence interval of
+    the coefficient of variability for the
+    repeatability in \code{MP_B}.
+    \item \code{lambda: } A \code{numeric} vector.
+    The point estimates of the repeatability
+    variance ratio between \code{MP_A} and
+    \code{MP_B}.
+    \item \code{lambda_lwr: } A \code{numeric}
+    vector. The lower bounds of a confidence
+    interval of \code{lambda}.
+    \item \code{lambda_upr: } A \code{numeric}
+    vector. The upper bounds of a confidence
+    interval of \code{lambda}.
+}
+This can be omitted.}
 
-\item{rounding}{\code{integer} - How many decimals should be included in the float type variables? The implicit maximum is 6 decimals, meaning that any integer larger than 6 will produce a warning}
+\item{rounding}{An \code{integer}. The maximum number of decimals to use
+for the output \code{numeric} values.}
 
-\item{include_imprecision_estimates}{\code{boolean} - Should imprecision estimates be part of the merged results. Default is \code{FALSE}.}
+\item{include_imprecision_estimates}{An \code{logical} value. If
+\code{TRUE}, imprecision estimate are
+included in the output. In this case,
+\code{imprecision_data} cannot be
+omitted.}
 
-\item{silence}{\code{integer} - Should progress reports be printed? For yes, pass \code{0}. For no, pass \code{1}. \code{1} is default.}
+\item{silence}{An \code{integer}. Set to \eqn{\leq} \code{0} to allow
+verbose.}
 }
 \value{
-A \code{list} with two main components, merged data results for commutability evaluation of control materials and merged results for prediction bands. The latter may be used to plot commutability evaluation plots
+A \code{list} of length two:
+\itemize{
+  \item \code{pb_data: } The input \code{pb_data} with additional elements
+                         added in the merging process with \code{zeta_data}
+                         and \code{imprecision_data}.
+  \item \code{ce_data: } The input \code{ce_data} with additional elements
+                         added in the merging process with \code{zeta_data}
+                         and \code{imprecision_data}
+}
 }
 \description{
-Merge all the essential components (e.g., pb_data, ce_data, zeta_data) of the commutability evaluation analysis into one object, so it will be easier to plot and present commutability evaluation results
+Merge all the essential components for a complete commutability evaluation
+data analysis. This merging allows for presenting the commutability
+evaluation results in both plots and tables.
 }
 \details{
 Merge all commutability evaluation computations efficiently into one object
 
-The merging is done with respect to the comparison column that needs to be common in every data input. The effects of missing values in the comparison variable may yield unexpected results or errors, so ensure that at least this column, is NA-free.
+
+The merging is done with respect to the \code{comparison} column. Hence,
+\code{comparison} must be part of all input components (i.e.,
+\code{pb_data}, \code{ce_data}, \code{zeta_data}, \code{imprecision_data}).
+
+In practice, this function results in two merged datasets.
+
+(1) \code{ pb_data} is merged with \code{zeta_data} and
+\code{imprecision_data}, using \code{comparison} as the key for the merging
+process. The output will be a new \code{pb_data} that contain relevant
+information from \code{zeta_data} and \code{imprecision_data}.
+
+(2) \code{ ce_data} is merged with \code{zeta_data} and
+\code{imprecision_data}, using \code{comparison} as key for the merging
+process. The output will be a new \code{ce_data} that contain relevant
+information from \code{zeta_data} and \code{imprecision_data}.
 }
 \examples{
 \dontrun{

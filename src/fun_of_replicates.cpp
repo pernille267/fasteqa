@@ -1,752 +1,142 @@
 #include <Rcpp.h>
+#include <string>
+#include <unordered_map>
+#include <vector>
+#include <algorithm>
+#include <cmath>
 using namespace Rcpp;
 
-//' Apply a mathematical summary function on every SampleID
-//' 
-//' @title Apply a mathematical summary function on every SampleID
+// (*) Helper function to calculate the specified statistic
+double calculate_stat(const std::vector<double>& values, const std::string& fun) {
+  if (values.empty()) {
+    return NA_REAL;
+  }
+
+  double result = 0.0;
+  size_t n = values.size();
+
+  if (fun == "mean") {
+    result = std::accumulate(values.begin(), values.end(), 0.0) / n;
+  } else if (fun == "var") {
+    if (std::adjacent_find(values.begin(), values.end(),
+                           std::not_equal_to<>()) == values.end()) {
+      result = NA_REAL;
+    }
+    else{
+      double mean = std::accumulate(values.begin(), values.end(), 0.0) / n;
+      double sqSum = std::inner_product(values.begin(), values.end(), values.begin(), 0.0);
+      result = (sqSum - n * mean * mean) / (n - 1);
+    }
+
+  } else if (fun == "median") {
+    std::vector<double> sortedValues = values;
+    std::sort(sortedValues.begin(), sortedValues.end());
+    result = (n % 2 == 0) ? (sortedValues[n/2 - 1] + sortedValues[n/2]) / 2 : sortedValues[n/2];
+  } else if (fun == "sd") {
+    if (std::adjacent_find(values.begin(), values.end(),
+                           std::not_equal_to<>()) == values.end()) {
+      result = NA_REAL;
+    }
+    else{
+      double mean = std::accumulate(values.begin(), values.end(), 0.0) / n;
+      double sqSum = std::inner_product(values.begin(), values.end(), values.begin(), 0.0);
+      result = std::sqrt((sqSum - n * mean * mean) / (n - 1));
+    }
+  } else if (fun == "cv") {
+    if (std::adjacent_find(values.begin(), values.end(),
+                           std::not_equal_to<>()) == values.end()) {
+      result = NA_REAL;
+    }
+    else{
+      double mean = std::accumulate(values.begin(), values.end(), 0.0) / n;
+      double sqSum = std::inner_product(values.begin(), values.end(), values.begin(), 0.0);
+      double stDev = std::sqrt((sqSum - n * mean * mean) / (n - 1));
+      result = stDev / mean;
+    }
+  } else if (fun == "min") {
+    result = *std::min_element(values.begin(), values.end());
+  } else if (fun == "max") {
+    result = *std::max_element(values.begin(), values.end());
+  } else {
+    Rcpp::stop("Invalid statistic type specified");
+  }
+
+  return result;
+}
+
+//' @title Estimate a Statistic for Each Sample
 //' @name fun_of_replicates
-//' 
-//' @param data \code{list} or \code{data table} - Data with elements/columns \code{SampleID}, \code{ReplicateID}, \code{MP_A} and \code{MP_B}
-//' @param fun \code{string} - Used to choose the summary function one want to apply on each samples' measurements. Here is the list of possible valid summary functions:
-//' \itemize{
-//'   \item{\code{mean: }}{Taking the average of replicated measurments for samples with at least one measurement. Default}
-//'   \item{\code{median: }}{Taking the median of replicated measurments for samples with at least one measurement}
-//'   \item{\code{min: }}{Taking the minimum of replicated measurments for samples with at least one measurement}
-//'   \item{\code{max: }}{Taking the maximum of replicated measurements for samples with at least one measurement}
-//'   \item{\code{var: }}{Taking the variance of replicated measurements for samples with at least two measurements}
-//'   \item{\code{sd: }}{Taking the standard deviation of replicated measurements for samples with at least two measurements}
-//'   \item{\code{cv: }}{Taking the coefficient of variation of replicated measurements for samples with at least two measurements}
-//' }
-//' @param silence \code{integer} - Should debugging messages be printed. Default is no
 //'
-//' @description A practical function to evaluate summary typical summary functions of samples' replicated measurements. Taking mean of replicates, sd of replicates or cv of replicates are typical when analyzing EQA data so these are very useful. The remaning functions are not used as much, but may be needed in some cases so they are included based on this fact. In order for this function to work propery you need to ensure that:
-//' \itemize{
-//'   \item{\code{SampleID: }}{Must be a character vector}
-//'   \item{\code{ReplicateID: }}{Must be a character vector}
-//'   \item{\code{MP_A: }}{Must be a numeric vector}
-//'   \item{\code{MP_B: }}{Must be a numeric vector}
-//' }
+//' @param data A \code{data.table} or \code{list} object. Must contain
+//'        \code{SampleID}, \code{ReplicateID}, \code{MP_A} and \code{MP_B}.
+//' @param fun A \code{character} string. Which statistic is to be calculated for
+//'        each SampleID. Possible choices include \code{mean}, \code{var} (variance),
+//'        \code{sd} (standard deviaton), \code{cv} (coefficient of variation),
+//'        \code{median}, \code{min} (minimum) and \code{max} (maximum).
 //'
-//' @details The difference between this function and \code{mean_of_replicates()} method in the \code{commutability.selectivity}, is that this is more than ten times faster.
+//' @description
+//' For each sample, uses the replicated measurements to estimate
+//' a given statistic.
 //'
-//' @return list - data containing the elements that is needed to build the resulting data of results. Use \code{setDT()} for maximum efficiency when converting the list into a data table 
+//' @details
+//' This function handles \code{NA}-values automatically. If all replicated measurements
+//' for a given sample are \code{NA}-values, the corresponding estimated statistic will also
+//' be \code{NA}. 
+//'
+//' @return
+//' A \code{list} with elements \code{SampleID}, \code{MP_A} and \code{MP_B}.
+//' \code{MP_A} and \code{MP_B} contains the estimated sample-wise statistics.
 //'
 //' @examples \dontrun{
 //'   library(fasteqa)
-//'   data <- simulate_eqa_data()
-//'   mean_of_replicates_data <- fun_of_replicates(data)
-//'   var_of_replicates_data <- fun_of_replicates(data, "var")
+//'   test_data <- simulate_eqa_data(list(n = 25, R = 5, cvx = 0.01,
+//'                                       cvy = 0.01, cil = 2, ciu = 10))
+//'   print(as.data.frame(fun_of_replicates(test_data, "mean")))
+//'   print(as.data.frame(fun_of_replicates(test_data, "var")))
+//'   print(as.data.frame(fun_of_replicates(test_data, "cv")))
 //' }
-
-
 // [[Rcpp::export]]
-List fun_of_replicates(List data, String fun = "mean", int silence = 1){
-  CharacterVector SampleID = data["SampleID"];
-  CharacterVector ReplicateID = data["ReplicateID"];
-  NumericVector MS_A = data["MP_A"];
-  NumericVector MS_B = data["MP_B"];
-  CharacterVector summary_SampleID = unique(SampleID);
-  int n = summary_SampleID.size();
-  int N = SampleID.size();
-  NumericVector new_MS_A(n);
-  NumericVector new_MS_B(n);
-  int counter = 0;
-  int replicate_number_requirement = 0;
-  CharacterVector valid_funs = CharacterVector::create("mean", "median", "min", "max", "var", "sd", "cv");
-  CharacterVector fun_check(1);
-  fun_check[0] = fun;
-  int valid_fun_input = sum(in(fun_check, valid_funs));
-  if(valid_fun_input < 1){
-    stop("Given input for fun is not recongnized. See ?fun_of_replicates() for valid fun inputs");
-  }
-  if(valid_fun_input > 1){
-    stop("Vector of functions are not allowed. See ?fun_of_replicates() for valid fun inputs");
-  }
-  
-  if(fun == "mean" or fun == "median" or fun == "min" or fun == "max"){
-    replicate_number_requirement = 1;
-  }
-  if(fun == "sd" or fun == "var" or fun == "cv"){
-    replicate_number_requirement = 2;
-  }
-  
-  if(fun == "mean"){
-    for(int i = 0; i < n; ++i){
-      // Extract necessary information on the ith sample (indices and number of replicated meas)
-      CharacterVector ith_sample(1);
-      ith_sample[0] = summary_SampleID[i];
-      LogicalVector sample_match = in(SampleID, ith_sample);
-      int index_vector_length = sum(sample_match);
-      NumericVector index_vector(index_vector_length);
-      int relevant_ind = 0;
-      for(int j = 0; j < N; ++j){
-        if(sample_match[j] == 1){
-          index_vector[relevant_ind] = j;
-          ++relevant_ind;
-        }
-      }
-      
-      // Create empty vectors to be filled with measurements of the ith sample
-      NumericVector ith_sample_measurements_A(index_vector_length);
-      NumericVector ith_sample_measurements_B(index_vector_length);
-      
-      // Checks for NA-values
-      // If R_IsNA results in 1 (i.e., NA-value) let the kth measurement be zero
-      // Otherwise, the kth measurement will be the kth measurement of MS_A / MS_B
-      for(int k = 0; k < index_vector_length; ++k){
-        int na_check_A = R_IsNA(MS_A[index_vector[k]]);
-        if(na_check_A == 0){
-          ith_sample_measurements_A[k] = MS_A[index_vector[k]];
-        }
-        int na_check_B = R_IsNA(MS_B[index_vector[k]]);
-        if(na_check_B == 0){
-          ith_sample_measurements_B[k] = MS_B[index_vector[k]];  
-        }
-      }
-      
-      // Create NA-search vectors with zeros and ones matching with ith sample of MS_A and MS_B
-      IntegerVector NA_search_A(index_vector_length);
-      IntegerVector NA_search_B(index_vector_length);
-      
-      // recall: ith_sample_measurements_*[k] = 0 signify that the value is a NA-value
-      // NA_search_* will return 0 if ith_sample_measurements_*[k] = 0, and 1 otherwise 
-      for(int k = 0; k < index_vector_length; ++k){
-        if(ith_sample_measurements_A[k] <= 0){
-          NA_search_A[k] = 0;
-        }
-        if(ith_sample_measurements_A[k] > 0){
-          NA_search_A[k] = 1;
-        }
-        if(ith_sample_measurements_B[k] <= 0){
-          NA_search_B[k] = 0;
-        }
-        if(ith_sample_measurements_B[k] > 0){
-          NA_search_B[k] = 1;
-        }
-      }
-      
-      // Aligning vectors making it easier to delete NA-values
-      ith_sample_measurements_A = ith_sample_measurements_A.sort();
-      ith_sample_measurements_B = ith_sample_measurements_B.sort();
-      NA_search_A = NA_search_A.sort();
-      NA_search_B = NA_search_B.sort();
-      
-      // Step-wise check for NA values at vector start and delete if it is a NA-value for MS_A
-      for(int k = 0; k < index_vector_length; ++k){
-        if(NA_search_A[k] == 0){
-          ith_sample_measurements_A.erase(0); 
-        }
-      }
-      
-      // Step-wise check for NA values at vector start and delete if it is a NA-value for MS_A
-      for(int k = 0; k < index_vector_length; ++k){
-        if(NA_search_B[k] == 0){
-          ith_sample_measurements_B.erase(0);
-        }
-      }
-      
-      // Checks if the number of replicates meets the conditions of the relevant summary function
-      // If met, the summary function is applied. Otherwise, the result will be a NA-value
-      if(ith_sample_measurements_A.size() < replicate_number_requirement){
-        new_MS_A[counter] = NA_REAL;  
-      }
-      if(ith_sample_measurements_A.size() >= replicate_number_requirement){
-        new_MS_A[counter] = mean(ith_sample_measurements_A);
-      }
-      if(ith_sample_measurements_B.size() < replicate_number_requirement){
-        new_MS_B[counter] = NA_REAL;
-      }
-      if(ith_sample_measurements_B.size() >= replicate_number_requirement){
-        new_MS_B[counter] = mean(ith_sample_measurements_B);  
-      }
-      ++counter;
+List fun_of_replicates(List data, std::string fun = "mean") {
+  CharacterVector sampleID = data["SampleID"];
+  NumericVector MP_A = data["MP_A"];
+  NumericVector MP_B = data["MP_B"];
+
+  std::unordered_map<std::string, std::vector<double>> groupedDataA;
+  std::unordered_map<std::string, std::vector<double>> groupedDataB;
+  std::vector<std::string> uniqueIDsOrdered;
+
+  int n = sampleID.size();
+
+  for (int i = 0; i < n; ++i) {
+    std::string id = as<std::string>(sampleID[i]);
+    if (groupedDataA.find(id) == groupedDataA.end()) {
+      uniqueIDsOrdered.push_back(id);
+    }
+    if (!NumericVector::is_na(MP_A[i])) {
+      groupedDataA[id].push_back(MP_A[i]);
+    }
+    if (!NumericVector::is_na(MP_B[i])) {
+      groupedDataB[id].push_back(MP_B[i]);
     }
   }
-  
-  // Median
-  //
-  // // // // // // //
-  
-  if(fun == "median"){
-    for(int i = 0; i < n; ++i){
-      // Extract necessary information on the ith sample (indices and number of replicated meas)
-      CharacterVector ith_sample(1);
-      ith_sample[0] = summary_SampleID[i];
-      LogicalVector sample_match = in(SampleID, ith_sample);
-      int index_vector_length = sum(sample_match);
-      NumericVector index_vector(index_vector_length);
-      int relevant_ind = 0;
-      for(int j = 0; j < N; ++j){
-        if(sample_match[j] == 1){
-          index_vector[relevant_ind] = j;
-          ++relevant_ind;
-        }
-      }
-      
-      // Create empty vectors to be filled with measurements of the ith sample
-      NumericVector ith_sample_measurements_A(index_vector_length);
-      NumericVector ith_sample_measurements_B(index_vector_length);
-      
-      // Checks for NA-values
-      // If R_IsNA results in 1 (i.e., NA-value) let the kth measurement be zero
-      // Otherwise, the kth measurement will be the kth measurement of MS_A / MS_B
-      for(int k = 0; k < index_vector_length; ++k){
-        int na_check_A = R_IsNA(MS_A[index_vector[k]]);
-        if(na_check_A == 0){
-          ith_sample_measurements_A[k] = MS_A[index_vector[k]];
-        }
-        int na_check_B = R_IsNA(MS_B[index_vector[k]]);
-        if(na_check_B == 0){
-          ith_sample_measurements_B[k] = MS_B[index_vector[k]];  
-        }
-      }
-      
-      // Create NA-search vectors with zeros and ones matching with ith sample of MS_A and MS_B
-      IntegerVector NA_search_A(index_vector_length);
-      IntegerVector NA_search_B(index_vector_length);
-      
-      // recall: ith_sample_measurements_*[k] = 0 signify that the value is a NA-value
-      // NA_search_* will return 0 if ith_sample_measurements_*[k] = 0, and 1 otherwise 
-      for(int k = 0; k < index_vector_length; ++k){
-        if(ith_sample_measurements_A[k] <= 0){
-          NA_search_A[k] = 0;
-        }
-        if(ith_sample_measurements_A[k] > 0){
-          NA_search_A[k] = 1;
-        }
-        if(ith_sample_measurements_B[k] <= 0){
-          NA_search_B[k] = 0;
-        }
-        if(ith_sample_measurements_B[k] > 0){
-          NA_search_B[k] = 1;
-        }
-      }
-      
-      // Aligning vectors making it easier to delete NA-values
-      ith_sample_measurements_A = ith_sample_measurements_A.sort();
-      ith_sample_measurements_B = ith_sample_measurements_B.sort();
-      NA_search_A = NA_search_A.sort();
-      NA_search_B = NA_search_B.sort();
-      
-      // Step-wise check for NA values at vector start and delete if it is a NA-value for MS_A
-      for(int k = 0; k < index_vector_length; ++k){
-        if(NA_search_A[k] == 0){
-          ith_sample_measurements_A.erase(0); 
-        }
-      }
-      
-      // Step-wise check for NA values at vector start and delete if it is a NA-value for MS_A
-      for(int k = 0; k < index_vector_length; ++k){
-        if(NA_search_B[k] == 0){
-          ith_sample_measurements_B.erase(0);
-        }
-      }
-      
-      // Checks if the number of replicates meets the conditions of the relevant summary function
-      // If met, the summary function is applied. Otherwise, the result will be a NA-value
-      if(ith_sample_measurements_A.size() < replicate_number_requirement){
-        new_MS_A[counter] = NA_REAL;  
-      }
-      if(ith_sample_measurements_A.size() >= replicate_number_requirement){
-        new_MS_A[counter] = median(ith_sample_measurements_A);
-      }
-      if(ith_sample_measurements_B.size() < replicate_number_requirement){
-        new_MS_B[counter] = NA_REAL;
-      }
-      if(ith_sample_measurements_B.size() >= replicate_number_requirement){
-        new_MS_B[counter] = median(ith_sample_measurements_B);  
-      }
-      ++counter;
-    }
+
+  CharacterVector uniqueIDs(uniqueIDsOrdered.size());
+  NumericVector statA(uniqueIDsOrdered.size());
+  NumericVector statB(uniqueIDsOrdered.size());
+
+  for (size_t i = 0; i < uniqueIDsOrdered.size(); ++i) {
+    const std::string& id = uniqueIDsOrdered[i];
+    uniqueIDs[i] = id;
+
+    statA[i] = calculate_stat(groupedDataA[id], fun);
+    statB[i] = calculate_stat(groupedDataB[id], fun);
   }
-  
-  // MIN
-  //
-  // // // //
-  
-  if(fun == "min"){
-    for(int i = 0; i < n; ++i){
-      // Extract necessary information on the ith sample (indices and number of replicated meas)
-      CharacterVector ith_sample(1);
-      ith_sample[0] = summary_SampleID[i];
-      LogicalVector sample_match = in(SampleID, ith_sample);
-      int index_vector_length = sum(sample_match);
-      NumericVector index_vector(index_vector_length);
-      int relevant_ind = 0;
-      for(int j = 0; j < N; ++j){
-        if(sample_match[j] == 1){
-          index_vector[relevant_ind] = j;
-          ++relevant_ind;
-        }
-      }
-      
-      // Create empty vectors to be filled with measurements of the ith sample
-      NumericVector ith_sample_measurements_A(index_vector_length);
-      NumericVector ith_sample_measurements_B(index_vector_length);
-      
-      // Checks for NA-values
-      // If R_IsNA results in 1 (i.e., NA-value) let the kth measurement be zero
-      // Otherwise, the kth measurement will be the kth measurement of MS_A / MS_B
-      for(int k = 0; k < index_vector_length; ++k){
-        int na_check_A = R_IsNA(MS_A[index_vector[k]]);
-        if(na_check_A == 0){
-          ith_sample_measurements_A[k] = MS_A[index_vector[k]];
-        }
-        int na_check_B = R_IsNA(MS_B[index_vector[k]]);
-        if(na_check_B == 0){
-          ith_sample_measurements_B[k] = MS_B[index_vector[k]];  
-        }
-      }
-      
-      // Create NA-search vectors with zeros and ones matching with ith sample of MS_A and MS_B
-      IntegerVector NA_search_A(index_vector_length);
-      IntegerVector NA_search_B(index_vector_length);
-      
-      // recall: ith_sample_measurements_*[k] = 0 signify that the value is a NA-value
-      // NA_search_* will return 0 if ith_sample_measurements_*[k] = 0, and 1 otherwise 
-      for(int k = 0; k < index_vector_length; ++k){
-        if(ith_sample_measurements_A[k] <= 0){
-          NA_search_A[k] = 0;
-        }
-        if(ith_sample_measurements_A[k] > 0){
-          NA_search_A[k] = 1;
-        }
-        if(ith_sample_measurements_B[k] <= 0){
-          NA_search_B[k] = 0;
-        }
-        if(ith_sample_measurements_B[k] > 0){
-          NA_search_B[k] = 1;
-        }
-      }
-      
-      // Aligning vectors making it easier to delete NA-values
-      ith_sample_measurements_A = ith_sample_measurements_A.sort();
-      ith_sample_measurements_B = ith_sample_measurements_B.sort();
-      NA_search_A = NA_search_A.sort();
-      NA_search_B = NA_search_B.sort();
-      
-      // Step-wise check for NA values at vector start and delete if it is a NA-value for MS_A
-      for(int k = 0; k < index_vector_length; ++k){
-        if(NA_search_A[k] == 0){
-          ith_sample_measurements_A.erase(0); 
-        }
-      }
-      
-      // Step-wise check for NA values at vector start and delete if it is a NA-value for MS_A
-      for(int k = 0; k < index_vector_length; ++k){
-        if(NA_search_B[k] == 0){
-          ith_sample_measurements_B.erase(0);
-        }
-      }
-      
-      // Checks if the number of replicates meets the conditions of the relevant summary function
-      // If met, the summary function is applied. Otherwise, the result will be a NA-value
-      if(ith_sample_measurements_A.size() < replicate_number_requirement){
-        new_MS_A[counter] = NA_REAL;  
-      }
-      if(ith_sample_measurements_A.size() >= replicate_number_requirement){
-        new_MS_A[counter] = min(ith_sample_measurements_A);
-      }
-      if(ith_sample_measurements_B.size() < replicate_number_requirement){
-        new_MS_B[counter] = NA_REAL;
-      }
-      if(ith_sample_measurements_B.size() >= replicate_number_requirement){
-        new_MS_B[counter] = min(ith_sample_measurements_B);  
-      }
-      ++counter;
-    }
-  }
-  
-  // MAX
-  //
-  // // // //
-  
-  if(fun == "max"){
-    for(int i = 0; i < n; ++i){
-      // Extract necessary information on the ith sample (indices and number of replicated meas)
-      CharacterVector ith_sample(1);
-      ith_sample[0] = summary_SampleID[i];
-      LogicalVector sample_match = in(SampleID, ith_sample);
-      int index_vector_length = sum(sample_match);
-      NumericVector index_vector(index_vector_length);
-      int relevant_ind = 0;
-      for(int j = 0; j < N; ++j){
-        if(sample_match[j] == 1){
-          index_vector[relevant_ind] = j;
-          ++relevant_ind;
-        }
-      }
-      
-      // Create empty vectors to be filled with measurements of the ith sample
-      NumericVector ith_sample_measurements_A(index_vector_length);
-      NumericVector ith_sample_measurements_B(index_vector_length);
-      
-      // Checks for NA-values
-      // If R_IsNA results in 1 (i.e., NA-value) let the kth measurement be zero
-      // Otherwise, the kth measurement will be the kth measurement of MS_A / MS_B
-      for(int k = 0; k < index_vector_length; ++k){
-        int na_check_A = R_IsNA(MS_A[index_vector[k]]);
-        if(na_check_A == 0){
-          ith_sample_measurements_A[k] = MS_A[index_vector[k]];
-        }
-        int na_check_B = R_IsNA(MS_B[index_vector[k]]);
-        if(na_check_B == 0){
-          ith_sample_measurements_B[k] = MS_B[index_vector[k]];  
-        }
-      }
-      
-      // Create NA-search vectors with zeros and ones matching with ith sample of MS_A and MS_B
-      IntegerVector NA_search_A(index_vector_length);
-      IntegerVector NA_search_B(index_vector_length);
-      
-      // recall: ith_sample_measurements_*[k] = 0 signify that the value is a NA-value
-      // NA_search_* will return 0 if ith_sample_measurements_*[k] = 0, and 1 otherwise 
-      for(int k = 0; k < index_vector_length; ++k){
-        if(ith_sample_measurements_A[k] <= 0){
-          NA_search_A[k] = 0;
-        }
-        if(ith_sample_measurements_A[k] > 0){
-          NA_search_A[k] = 1;
-        }
-        if(ith_sample_measurements_B[k] <= 0){
-          NA_search_B[k] = 0;
-        }
-        if(ith_sample_measurements_B[k] > 0){
-          NA_search_B[k] = 1;
-        }
-      }
-      
-      // Aligning vectors making it easier to delete NA-values
-      ith_sample_measurements_A = ith_sample_measurements_A.sort();
-      ith_sample_measurements_B = ith_sample_measurements_B.sort();
-      NA_search_A = NA_search_A.sort();
-      NA_search_B = NA_search_B.sort();
-      
-      // Step-wise check for NA values at vector start and delete if it is a NA-value for MS_A
-      for(int k = 0; k < index_vector_length; ++k){
-        if(NA_search_A[k] == 0){
-          ith_sample_measurements_A.erase(0); 
-        }
-      }
-      
-      // Step-wise check for NA values at vector start and delete if it is a NA-value for MS_A
-      for(int k = 0; k < index_vector_length; ++k){
-        if(NA_search_B[k] == 0){
-          ith_sample_measurements_B.erase(0);
-        }
-      }
-      
-      // Checks if the number of replicates meets the conditions of the relevant summary function
-      // If met, the summary function is applied. Otherwise, the result will be a NA-value
-      if(ith_sample_measurements_A.size() < replicate_number_requirement){
-        new_MS_A[counter] = NA_REAL;  
-      }
-      if(ith_sample_measurements_A.size() >= replicate_number_requirement){
-        new_MS_A[counter] = max(ith_sample_measurements_A);
-      }
-      if(ith_sample_measurements_B.size() < replicate_number_requirement){
-        new_MS_B[counter] = NA_REAL;
-      }
-      if(ith_sample_measurements_B.size() >= replicate_number_requirement){
-        new_MS_B[counter] = max(ith_sample_measurements_B);  
-      }
-      ++counter;
-    }
-  }
-  
-  // VAR
-  //
-  // // // //
-  
-  if(fun == "var"){
-    for(int i = 0; i < n; ++i){
-      // Extract necessary information on the ith sample (indices and number of replicated meas)
-      CharacterVector ith_sample(1);
-      ith_sample[0] = summary_SampleID[i];
-      LogicalVector sample_match = in(SampleID, ith_sample);
-      int index_vector_length = sum(sample_match);
-      NumericVector index_vector(index_vector_length);
-      int relevant_ind = 0;
-      for(int j = 0; j < N; ++j){
-        if(sample_match[j] == 1){
-          index_vector[relevant_ind] = j;
-          ++relevant_ind;
-        }
-      }
-      
-      // Create empty vectors to be filled with measurements of the ith sample
-      NumericVector ith_sample_measurements_A(index_vector_length);
-      NumericVector ith_sample_measurements_B(index_vector_length);
-      
-      // Checks for NA-values
-      // If R_IsNA results in 1 (i.e., NA-value) let the kth measurement be zero
-      // Otherwise, the kth measurement will be the kth measurement of MS_A / MS_B
-      for(int k = 0; k < index_vector_length; ++k){
-        int na_check_A = R_IsNA(MS_A[index_vector[k]]);
-        if(na_check_A == 0){
-          ith_sample_measurements_A[k] = MS_A[index_vector[k]];
-        }
-        int na_check_B = R_IsNA(MS_B[index_vector[k]]);
-        if(na_check_B == 0){
-          ith_sample_measurements_B[k] = MS_B[index_vector[k]];  
-        }
-      }
-      
-      // Create NA-search vectors with zeros and ones matching with ith sample of MS_A and MS_B
-      IntegerVector NA_search_A(index_vector_length);
-      IntegerVector NA_search_B(index_vector_length);
-      
-      // recall: ith_sample_measurements_*[k] = 0 signify that the value is a NA-value
-      // NA_search_* will return 0 if ith_sample_measurements_*[k] = 0, and 1 otherwise 
-      for(int k = 0; k < index_vector_length; ++k){
-        if(ith_sample_measurements_A[k] <= 0){
-          NA_search_A[k] = 0;
-        }
-        if(ith_sample_measurements_A[k] > 0){
-          NA_search_A[k] = 1;
-        }
-        if(ith_sample_measurements_B[k] <= 0){
-          NA_search_B[k] = 0;
-        }
-        if(ith_sample_measurements_B[k] > 0){
-          NA_search_B[k] = 1;
-        }
-      }
-      
-      // Aligning vectors making it easier to delete NA-values
-      ith_sample_measurements_A = ith_sample_measurements_A.sort();
-      ith_sample_measurements_B = ith_sample_measurements_B.sort();
-      NA_search_A = NA_search_A.sort();
-      NA_search_B = NA_search_B.sort();
-      
-      // Step-wise check for NA values at vector start and delete if it is a NA-value for MS_A
-      for(int k = 0; k < index_vector_length; ++k){
-        if(NA_search_A[k] == 0){
-          ith_sample_measurements_A.erase(0); 
-        }
-      }
-      
-      // Step-wise check for NA values at vector start and delete if it is a NA-value for MS_A
-      for(int k = 0; k < index_vector_length; ++k){
-        if(NA_search_B[k] == 0){
-          ith_sample_measurements_B.erase(0);
-        }
-      }
-      
-      // Checks if the number of replicates meets the conditions of the relevant summary function
-      // If met, the summary function is applied. Otherwise, the result will be a NA-value
-      if(ith_sample_measurements_A.size() < replicate_number_requirement){
-        new_MS_A[counter] = NA_REAL;  
-      }
-      if(ith_sample_measurements_A.size() >= replicate_number_requirement){
-        new_MS_A[counter] = var(ith_sample_measurements_A);
-      }
-      if(ith_sample_measurements_B.size() < replicate_number_requirement){
-        new_MS_B[counter] = NA_REAL;
-      }
-      if(ith_sample_measurements_B.size() >= replicate_number_requirement){
-        new_MS_B[counter] = var(ith_sample_measurements_B);  
-      }
-      ++counter;
-    }
-  }
-  
-  // SD
-  //
-  // // // //
-  
-  if(fun == "sd"){
-    for(int i = 0; i < n; ++i){
-      // Extract necessary information on the ith sample (indices and number of replicated meas)
-      CharacterVector ith_sample(1);
-      ith_sample[0] = summary_SampleID[i];
-      LogicalVector sample_match = in(SampleID, ith_sample);
-      int index_vector_length = sum(sample_match);
-      NumericVector index_vector(index_vector_length);
-      int relevant_ind = 0;
-      for(int j = 0; j < N; ++j){
-        if(sample_match[j] == 1){
-          index_vector[relevant_ind] = j;
-          ++relevant_ind;
-        }
-      }
-      
-      // Create empty vectors to be filled with measurements of the ith sample
-      NumericVector ith_sample_measurements_A(index_vector_length);
-      NumericVector ith_sample_measurements_B(index_vector_length);
-      
-      // Checks for NA-values
-      // If R_IsNA results in 1 (i.e., NA-value) let the kth measurement be zero
-      // Otherwise, the kth measurement will be the kth measurement of MS_A / MS_B
-      for(int k = 0; k < index_vector_length; ++k){
-        int na_check_A = R_IsNA(MS_A[index_vector[k]]);
-        if(na_check_A == 0){
-          ith_sample_measurements_A[k] = MS_A[index_vector[k]];
-        }
-        int na_check_B = R_IsNA(MS_B[index_vector[k]]);
-        if(na_check_B == 0){
-          ith_sample_measurements_B[k] = MS_B[index_vector[k]];  
-        }
-      }
-      
-      // Create NA-search vectors with zeros and ones matching with ith sample of MS_A and MS_B
-      IntegerVector NA_search_A(index_vector_length);
-      IntegerVector NA_search_B(index_vector_length);
-      
-      // recall: ith_sample_measurements_*[k] = 0 signify that the value is a NA-value
-      // NA_search_* will return 0 if ith_sample_measurements_*[k] = 0, and 1 otherwise 
-      for(int k = 0; k < index_vector_length; ++k){
-        if(ith_sample_measurements_A[k] <= 0){
-          NA_search_A[k] = 0;
-        }
-        if(ith_sample_measurements_A[k] > 0){
-          NA_search_A[k] = 1;
-        }
-        if(ith_sample_measurements_B[k] <= 0){
-          NA_search_B[k] = 0;
-        }
-        if(ith_sample_measurements_B[k] > 0){
-          NA_search_B[k] = 1;
-        }
-      }
-      
-      // Aligning vectors making it easier to delete NA-values
-      ith_sample_measurements_A = ith_sample_measurements_A.sort();
-      ith_sample_measurements_B = ith_sample_measurements_B.sort();
-      NA_search_A = NA_search_A.sort();
-      NA_search_B = NA_search_B.sort();
-      
-      // Step-wise check for NA values at vector start and delete if it is a NA-value for MS_A
-      for(int k = 0; k < index_vector_length; ++k){
-        if(NA_search_A[k] == 0){
-          ith_sample_measurements_A.erase(0); 
-        }
-      }
-      
-      // Step-wise check for NA values at vector start and delete if it is a NA-value for MS_A
-      for(int k = 0; k < index_vector_length; ++k){
-        if(NA_search_B[k] == 0){
-          ith_sample_measurements_B.erase(0);
-        }
-      }
-      
-      // Checks if the number of replicates meets the conditions of the relevant summary function
-      // If met, the summary function is applied. Otherwise, the result will be a NA-value
-      if(ith_sample_measurements_A.size() < replicate_number_requirement){
-        new_MS_A[counter] = NA_REAL;  
-      }
-      if(ith_sample_measurements_A.size() >= replicate_number_requirement){
-        new_MS_A[counter] = sd(ith_sample_measurements_A);
-      }
-      if(ith_sample_measurements_B.size() < replicate_number_requirement){
-        new_MS_B[counter] = NA_REAL;
-      }
-      if(ith_sample_measurements_B.size() >= replicate_number_requirement){
-        new_MS_B[counter] = sd(ith_sample_measurements_B);  
-      }
-      ++counter;
-    }
-  }
-  
-  // CV
-  //
-  // // // //
-  
-  if(fun == "cv"){
-    for(int i = 0; i < n; ++i){
-      // Extract necessary information on the ith sample (indices and number of replicated meas)
-      CharacterVector ith_sample(1);
-      ith_sample[0] = summary_SampleID[i];
-      LogicalVector sample_match = in(SampleID, ith_sample);
-      int index_vector_length = sum(sample_match);
-      NumericVector index_vector(index_vector_length);
-      int relevant_ind = 0;
-      for(int j = 0; j < N; ++j){
-        if(sample_match[j] == 1){
-          index_vector[relevant_ind] = j;
-          ++relevant_ind;
-        }
-      }
-      
-      // Create empty vectors to be filled with measurements of the ith sample
-      NumericVector ith_sample_measurements_A(index_vector_length);
-      NumericVector ith_sample_measurements_B(index_vector_length);
-      
-      // Checks for NA-values
-      // If R_IsNA results in 1 (i.e., NA-value) let the kth measurement be zero
-      // Otherwise, the kth measurement will be the kth measurement of MS_A / MS_B
-      for(int k = 0; k < index_vector_length; ++k){
-        int na_check_A = R_IsNA(MS_A[index_vector[k]]);
-        if(na_check_A == 0){
-          ith_sample_measurements_A[k] = MS_A[index_vector[k]];
-        }
-        int na_check_B = R_IsNA(MS_B[index_vector[k]]);
-        if(na_check_B == 0){
-          ith_sample_measurements_B[k] = MS_B[index_vector[k]];  
-        }
-      }
-      
-      // Create NA-search vectors with zeros and ones matching with ith sample of MS_A and MS_B
-      IntegerVector NA_search_A(index_vector_length);
-      IntegerVector NA_search_B(index_vector_length);
-      
-      // recall: ith_sample_measurements_*[k] = 0 signify that the value is a NA-value
-      // NA_search_* will return 0 if ith_sample_measurements_*[k] = 0, and 1 otherwise 
-      for(int k = 0; k < index_vector_length; ++k){
-        if(ith_sample_measurements_A[k] <= 0){
-          NA_search_A[k] = 0;
-        }
-        if(ith_sample_measurements_A[k] > 0){
-          NA_search_A[k] = 1;
-        }
-        if(ith_sample_measurements_B[k] <= 0){
-          NA_search_B[k] = 0;
-        }
-        if(ith_sample_measurements_B[k] > 0){
-          NA_search_B[k] = 1;
-        }
-      }
-      
-      // Aligning vectors making it easier to delete NA-values
-      ith_sample_measurements_A = ith_sample_measurements_A.sort();
-      ith_sample_measurements_B = ith_sample_measurements_B.sort();
-      NA_search_A = NA_search_A.sort();
-      NA_search_B = NA_search_B.sort();
-      
-      // Step-wise check for NA values at vector start and delete if it is a NA-value for MS_A
-      for(int k = 0; k < index_vector_length; ++k){
-        if(NA_search_A[k] == 0){
-          ith_sample_measurements_A.erase(0); 
-        }
-      }
-      
-      // Step-wise check for NA values at vector start and delete if it is a NA-value for MS_A
-      for(int k = 0; k < index_vector_length; ++k){
-        if(NA_search_B[k] == 0){
-          ith_sample_measurements_B.erase(0);
-        }
-      }
-      
-      // Checks if the number of replicates meets the conditions of the relevant summary function
-      // If met, the summary function is applied. Otherwise, the result will be a NA-value
-      if(ith_sample_measurements_A.size() < replicate_number_requirement){
-        new_MS_A[counter] = NA_REAL;  
-      }
-      if(ith_sample_measurements_A.size() >= replicate_number_requirement){
-        new_MS_A[counter] = sd(ith_sample_measurements_A) / mean(ith_sample_measurements_A);
-      }
-      if(ith_sample_measurements_B.size() < replicate_number_requirement){
-        new_MS_B[counter] = NA_REAL;
-      }
-      if(ith_sample_measurements_B.size() >= replicate_number_requirement){
-        new_MS_B[counter] = sd(ith_sample_measurements_B) / mean(ith_sample_measurements_B);  
-      }
-      ++counter;
-    }
-  }
-  
-  List out = List::create(Named("SampleID") = summary_SampleID, Named("MP_A") = new_MS_A, Named("MP_B") = new_MS_B);
-  return out;
+
+  return List::create(
+    Named("SampleID") = uniqueIDs,
+    Named("MP_A") = statA,
+    Named("MP_B") = statB
+  );
 }
 
 

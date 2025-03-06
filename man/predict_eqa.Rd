@@ -4,43 +4,100 @@
 \alias{predict_eqa}
 \title{Prediction Interval Estimation for EQA Data via Deming or OLS Regression}
 \arguments{
-\item{data}{A \code{list} or \code{data.table} representing mean-of-replicates clinical sample data with the \code{list} elements or \code{data.table} columns: \code{SampleID}, \code{MP_A}, and \code{MP_B}.}
+\item{data}{A \code{list} or \code{data.table} representing mean-of-replicates clinical sample data
+with the \code{list} elements or \code{data.table} columns: \code{SampleID}, \code{MP_A}, and \code{MP_B}.}
 
-\item{new_data}{A \code{list} or \code{data.table} representing mean-of-replicates EQA material / reference material data. This should at least include \code{MP_B} but may also contain \code{SampleID} and \code{MP_A} depending on the desired output structure:
+\item{new_data}{A \code{list} or \code{data.table} representing mean-of-replicates EQA material / reference material data.
+       This should at least include \code{MP_B} but may also contain \code{SampleID} and \code{MP_A} depending on the desired output structure:
 \itemize{
-  \item{\code{Minimum requirement}: }{new_data must include \code{MP_B}}
-  \item{\code{method = 'ols'}: }{new_data must include both \code{MP_B} and \code{MP_A}}
-  \item{\code{Inside checks performed}: }{new_data must include both \code{MP_B} and \code{MP_A}}
-  \item{\code{Sample-wise prediction}: }{new_data must include \code{MP_B} and \code{SampleID} (plus \code{MP_A} if method = 'ols')}
+  \item \code{Minimum requirement}: \code{new_data} must include \code{MP_B}.
+  \item \code{Inside checks performed}: \code{new_data} must include both \code{MP_B} and \code{MP_A}.
+  \item \code{Sample-wise prediction}: \code{new_data} must include \code{MP_B} and \code{SampleID}.
 }}
 
-\item{imprecision_estimates}{A \code{list} or \code{data.table} that includes necessary imprecision estimates. If \code{method} is \code{'fg'} or \code{'ols'}, this parameter should contain \code{lambda}. In case of \code{method = 'clsi'}, both \code{lambda} and \code{Var_B} must be included. The function \code{global_precision_estimates()} can be employed to generate suitable input for this parameter directly.}
+\item{imprecision_estimates}{A \code{list} or \code{data.table}.
+Must include \code{Var_B} and \code{lambda}. See details.}
 
-\item{R}{An \code{integer} indicating the number of replicates on which new_data is based. The convenience function \code{count_samplewise_replicates()} can be employed to generate suitable input for this parameter directly}
+\item{R}{An \code{integer} indicating the average number of replicates on which new_data is based.
+The convenience function \code{count_samplewise_replicates()} can be employed to generate
+suitable input for this parameter directly.}
 
-\item{R_ratio}{An \code{float} indicating the ratio of replicates between that number data and that number new_data are based on. Only relevant if \code{method = 'fg'} and if the number of replicates of data and new_data differs.}
+\item{R_ratio}{An \code{double}. The ratio of the number of replicates used in \code{new_data} and \code{data}.
+Only relevant if \code{method = 'fg'} or \code{method = 'ols'}.
+If the same number of replicates is used for measurements in \code{data} and \code{new_data},
+use the default value of \code{R_ratio = 1}.}
 
-\item{method}{A \code{string} specifying the method for estimating the prediction intervals. Default is \code{'fg'}. Current possible prediction interval estimation methods are:
+\item{method}{A \code{character} string. The method used to estimate the prediction intervals.
+       The default is \code{'fg'}. Current possible prediction interval estimation approaches are:
 \itemize{
-  \item{\code{fg: }}{Implements standard Deming regression with prediction intervals calculated using the Fuller and Gillard methods.}
-  \item{\code{clsi: }}{Utilizes standard Deming regression, with prediction intervals derived from the CLSI method.}
-  \item{\code{ols: }}{Implements Ordinary Least Squares regression, where the predictor is selected to minimize the variance of the ignored IVD-MD uncertainty. Specifically, \code{MP_A} is used as the predictor when \code{lambda < 1}, otherwise, \code{MP_B} is utilized.}
+  \item \code{fg: } Implements standard Deming regression with prediction intervals calculated using the 'Fuller & Gillard' approach. See details.
+  \item \code{clsi: } Utilizes standard Deming regression, with prediction intervals derived from the CLSI method. See details.
+  \item \code{ols: } Implements Ordinary Least Squares regression.
 }}
 
-\item{level}{A \code{float} representing the confidence level for the prediction intervals. It should be between \code{0} and \code{1}. The default setting is \code{0.99}. Please adjust for simultaneous testing if pointwise prediction intervals are used for classifying more than one EQA material / reference material in the same IVD-MD comparison.}
+\item{level}{A \code{double}. The nominal confidence level for the prediction intervals.
+Must be a value between \code{0} and \code{1}. The default setting is \code{0.99}.
+Please adjust for simultaneous testing if pointwise prediction intervals are used for
+classifying more than one EQA material / reference material in the same IVD-MD comparison.}
 
-\item{rounding}{An \code{integer} specifying the desired decimal places for the predictions and prediction intervals. The default setting is three, offering sufficient precision. The maximum limit is six due to the utilization of floating-point numbers.}
+\item{allow_reverse_regression}{A \code{logical} value. If set to \code{TRUE}, and \code{method = 'ols'},
+the response and predictor change roles if \code{lambda < 1}.}
+
+\item{rounding}{An \code{integer} specifying the desired number of decimal places for the predictions and prediction intervals.
+The default setting is \code{3L}, offering sufficient precision for most applications.
+The maximum limit is \code{12L}.}
 }
 \value{
-A \code{list} comprising estimated prediction interval data based on user inputs. The output \code{list} may be converted to \code{data.table} by employing the \code{setDT()} method from the \code{data.table} package in R.
+A \code{list} comprising estimated prediction interval data based on user inputs.
+This list will contain the following elements:
+\itemize{
+    \item \code{SampleID: } The ID(s) of the evaluated material(s).
+    \item \code{MP_B: } The measurement result(s) of the second IVD-MD in the \code{MP_A} - \code{MP_B} comparison (predictor).
+    \item \code{MP_A: } The measurement result(s) of the first IVD-MD in the \code{MP_A} - \code{MP_B} comparison (response).
+    \item \code{prediction: } The predicted value(s) of \code{MP_A} given the value(s) of \code{MP_B}.
+    \item \code{lwr: } The lower limit(s) of the estimated prediction interval(s) of \code{MP_A} given the value(s) of \code{MP_B}.
+    \item \code{upr: } The upper limit(s) of the estimated prediction interval(s) of \code{MP_A} given the value(s) of \code{MP_B}.
+    \item \code{inside: } Inside checks. If \code{1}, \code{MP_A} is inside the estimated prediction interval for \code{MP_A}.
+    On the other hand, if \code{0}, \code{MP_A} is outside the estimated prediction interval for \code{MP_A}.
+}
+The output \code{list} may be converted to \code{data.table} by employing the \code{setDT()} method from the \code{data.table} package in R.
 }
 \description{
-This function estimates prediction intervals for External Quality Assessment (EQA) data by applying either Deming (\code{method = 'fg'} or \code{method = 'clsi'}) or Ordinary Least Squares (\code{method = 'ols'}) regression methodologies. It is specifically designed for a single In Vitro Diagnostic Medical Device (IVD-MD) comparison. For processing multiple IVD-MD comparisons simultaneously, consider using the \code{estimate_prediction_data()} function from the commutability package, which executes this function on a per IVD-MD comparison basis.
+This function estimates pointwise prediction intervals for
+External Quality Assessment (EQA) data by applying either
+Deming (\code{method = 'fg'} or \code{method = 'clsi'}) or
+Ordinary Least Squares (\code{method = 'ols'}) regression methodologies.
+It is specifically designed for a single In Vitro Diagnostic Medical Device (IVD-MD) comparison.
+For processing multiple IVD-MD comparisons simultaneously, consider using the
+\code{estimate_prediction_data()} function from the \code{commutability} package,
+which executes this function on a per IVD-MD comparison basis.
 }
 \details{
-Prediction Interval Estimation for EQA Data via Deming or OLS Regression
+For commutability evaluation, inclusion of all \code{SampleID}, \code{MP_A}, and \code{MP_B}
+in \code{new_data} is required. If only prediction bands are required, one only need to include \code{MP_B} part of \code{new_data}.
 
-For optimal results, we recommended to include \code{SampleID}, \code{MP_A}, and \code{MP_B} in new_data whenever possible. If only \code{MP_B} is available, the use of \code{method = 'ols'} is not possible. For instance, when constructing prediction bands, only \code{MP_B} might be available. Thus, \code{method = 'ols'} may sadly not be used to estimate pointwise prediction intervals using this function.
+Imprecision Estimates
+
+Estimating prediction intervals may require certain imprecision estimates, which can be estimated from the raw data.
+Which imprecision estimates that are required depends on which method that is used to construct the prediction intervals.
+For \code{method = 'fg'} or \code{method = 'ols'}, \code{lambda} is required. This estimate is calculated by
+
+\eqn{\lambda = \frac{\hat{\sigma}_v^2}{\hat{\sigma}_h^2}}
+
+where \eqn{\hat{\sigma}_v^2} and \eqn{\hat{\sigma}_h^2} are pooled variances.
+If differences in non-selectivity (DINS) or equation error cannot be ruled out,
+\eqn{\lambda} will generally underestimate the true \eqn{\Lambda}. Do not forget this.
+
+For \code{method = 'clsi'}, both \code{Var_B} and \code{lambda} are required. \code{lambda} is calculated as before,
+and \code{Var_B} is just \eqn{\hat{\sigma}_h^2}.
+
+Note that both \code{lambda} and \code{Var_B} always must be given. However, if one of them
+is not necessary to estimate prediction intervals, it may take an arbitrary value.
+It is nevertheless recommended to always include actual values \code{lambda} and \code{Var_B},
+independently of whether they are actual used or not.
+
+Note also that \code{global_precision_estimates()} can be used to calculate both
+\code{lambda} and \code{Var_B}.
 }
 \examples{
 \dontrun{

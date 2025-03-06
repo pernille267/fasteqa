@@ -2,45 +2,39 @@
 % Please edit documentation in R/RcppExports.R
 \name{fun_of_replicates}
 \alias{fun_of_replicates}
-\title{Apply a mathematical summary function on every SampleID}
+\title{Estimate a Statistic for Each Sample}
+\usage{
+fun_of_replicates(data, fun = "mean")
+}
 \arguments{
-\item{data}{\code{list} or \code{data table} - Data with elements/columns \code{SampleID}, \code{ReplicateID}, \code{MP_A} and \code{MP_B}}
+\item{data}{A \code{data.table} or \code{list} object. Must contain
+\code{SampleID}, \code{ReplicateID}, \code{MP_A} and \code{MP_B}.}
 
-\item{fun}{\code{string} - Used to choose the summary function one want to apply on each samples' measurements. Here is the list of possible valid summary functions:
-\itemize{
-  \item{\code{mean: }}{Taking the average of replicated measurments for samples with at least one measurement. Default}
-  \item{\code{median: }}{Taking the median of replicated measurments for samples with at least one measurement}
-  \item{\code{min: }}{Taking the minimum of replicated measurments for samples with at least one measurement}
-  \item{\code{max: }}{Taking the maximum of replicated measurements for samples with at least one measurement}
-  \item{\code{var: }}{Taking the variance of replicated measurements for samples with at least two measurements}
-  \item{\code{sd: }}{Taking the standard deviation of replicated measurements for samples with at least two measurements}
-  \item{\code{cv: }}{Taking the coefficient of variation of replicated measurements for samples with at least two measurements}
-}}
-
-\item{silence}{\code{integer} - Should debugging messages be printed. Default is no}
+\item{fun}{A \code{character} string. Which statistic is to be calculated for
+each SampleID. Possible choices include \code{mean}, \code{var} (variance),
+\code{sd} (standard deviaton), \code{cv} (coefficient of variation),
+\code{median}, \code{min} (minimum) and \code{max} (maximum).}
 }
 \value{
-list - data containing the elements that is needed to build the resulting data of results. Use \code{setDT()} for maximum efficiency when converting the list into a data table
+A \code{list} with elements \code{SampleID}, \code{MP_A} and \code{MP_B}.
+\code{MP_A} and \code{MP_B} contains the estimated sample-wise statistics.
 }
 \description{
-A practical function to evaluate summary typical summary functions of samples' replicated measurements. Taking mean of replicates, sd of replicates or cv of replicates are typical when analyzing EQA data so these are very useful. The remaning functions are not used as much, but may be needed in some cases so they are included based on this fact. In order for this function to work propery you need to ensure that:
-\itemize{
-  \item{\code{SampleID: }}{Must be a character vector}
-  \item{\code{ReplicateID: }}{Must be a character vector}
-  \item{\code{MP_A: }}{Must be a numeric vector}
-  \item{\code{MP_B: }}{Must be a numeric vector}
-}
+For each sample, uses the replicated measurements to estimate
+a given statistic.
 }
 \details{
-Apply a mathematical summary function on every SampleID
-
-The difference between this function and \code{mean_of_replicates()} method in the \code{commutability.selectivity}, is that this is more than ten times faster.
+This function handles \code{NA}-values automatically. If all replicated measurements
+for a given sample are \code{NA}-values, the corresponding estimated statistic will also
+be \code{NA}.
 }
 \examples{
 \dontrun{
   library(fasteqa)
-  data <- simulate_eqa_data()
-  mean_of_replicates_data <- fun_of_replicates(data)
-  var_of_replicates_data <- fun_of_replicates(data, "var")
+  test_data <- simulate_eqa_data(list(n = 25, R = 5, cvx = 0.01,
+                                      cvy = 0.01, cil = 2, ciu = 10))
+  print(as.data.frame(fun_of_replicates(test_data, "mean")))
+  print(as.data.frame(fun_of_replicates(test_data, "var")))
+  print(as.data.frame(fun_of_replicates(test_data, "cv")))
 }
 }

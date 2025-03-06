@@ -10,33 +10,99 @@ Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
 Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
-// BCa_bootstrap_ci
-NumericVector BCa_bootstrap_ci(NumericVector bootstrapped_parameter_estimates, NumericVector jackknife_parameter_estimates, float original_parameter_estimate, float level, int silence);
-RcppExport SEXP _fasteqa_BCa_bootstrap_ci(SEXP bootstrapped_parameter_estimatesSEXP, SEXP jackknife_parameter_estimatesSEXP, SEXP original_parameter_estimateSEXP, SEXP levelSEXP, SEXP silenceSEXP) {
+// resample_samples
+List resample_samples(List data);
+RcppExport SEXP _fasteqa_resample_samples(SEXP dataSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< List >::type data(dataSEXP);
+    rcpp_result_gen = Rcpp::wrap(resample_samples(data));
+    return rcpp_result_gen;
+END_RCPP
+}
+// resample_fun_of_samples
+List resample_fun_of_samples(List data);
+RcppExport SEXP _fasteqa_resample_fun_of_samples(SEXP dataSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< List >::type data(dataSEXP);
+    rcpp_result_gen = Rcpp::wrap(resample_fun_of_samples(data));
+    return rcpp_result_gen;
+END_RCPP
+}
+// resample_global_precision_estimates
+List resample_global_precision_estimates(List data);
+RcppExport SEXP _fasteqa_resample_global_precision_estimates(SEXP dataSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< List >::type data(dataSEXP);
+    rcpp_result_gen = Rcpp::wrap(resample_global_precision_estimates(data));
+    return rcpp_result_gen;
+END_RCPP
+}
+// resample_zeta_estimates
+List resample_zeta_estimates(List data);
+RcppExport SEXP _fasteqa_resample_zeta_estimates(SEXP dataSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< List >::type data(dataSEXP);
+    rcpp_result_gen = Rcpp::wrap(resample_zeta_estimates(data));
+    return rcpp_result_gen;
+END_RCPP
+}
+// leave_one_out
+List leave_one_out(List data, int loo_id);
+RcppExport SEXP _fasteqa_leave_one_out(SEXP dataSEXP, SEXP loo_idSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< List >::type data(dataSEXP);
+    Rcpp::traits::input_parameter< int >::type loo_id(loo_idSEXP);
+    rcpp_result_gen = Rcpp::wrap(leave_one_out(data, loo_id));
+    return rcpp_result_gen;
+END_RCPP
+}
+// loo_global_precision_estimates
+List loo_global_precision_estimates(List data, int loo_id);
+RcppExport SEXP _fasteqa_loo_global_precision_estimates(SEXP dataSEXP, SEXP loo_idSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< List >::type data(dataSEXP);
+    Rcpp::traits::input_parameter< int >::type loo_id(loo_idSEXP);
+    rcpp_result_gen = Rcpp::wrap(loo_global_precision_estimates(data, loo_id));
+    return rcpp_result_gen;
+END_RCPP
+}
+// loo_zeta_estimates
+List loo_zeta_estimates(List data, int loo_id);
+RcppExport SEXP _fasteqa_loo_zeta_estimates(SEXP dataSEXP, SEXP loo_idSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< List >::type data(dataSEXP);
+    Rcpp::traits::input_parameter< int >::type loo_id(loo_idSEXP);
+    rcpp_result_gen = Rcpp::wrap(loo_zeta_estimates(data, loo_id));
+    return rcpp_result_gen;
+END_RCPP
+}
+// bootstrap_ci
+NumericVector bootstrap_ci(NumericVector bootstrapped_parameter_estimates, NumericVector jackknife_parameter_estimates, double original_parameter_estimate, int type, double level, int silence);
+RcppExport SEXP _fasteqa_bootstrap_ci(SEXP bootstrapped_parameter_estimatesSEXP, SEXP jackknife_parameter_estimatesSEXP, SEXP original_parameter_estimateSEXP, SEXP typeSEXP, SEXP levelSEXP, SEXP silenceSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< NumericVector >::type bootstrapped_parameter_estimates(bootstrapped_parameter_estimatesSEXP);
     Rcpp::traits::input_parameter< NumericVector >::type jackknife_parameter_estimates(jackknife_parameter_estimatesSEXP);
-    Rcpp::traits::input_parameter< float >::type original_parameter_estimate(original_parameter_estimateSEXP);
-    Rcpp::traits::input_parameter< float >::type level(levelSEXP);
-    Rcpp::traits::input_parameter< int >::type silence(silenceSEXP);
-    rcpp_result_gen = Rcpp::wrap(BCa_bootstrap_ci(bootstrapped_parameter_estimates, jackknife_parameter_estimates, original_parameter_estimate, level, silence));
-    return rcpp_result_gen;
-END_RCPP
-}
-// bootstrap_ci
-NumericVector bootstrap_ci(NumericVector bootstrapped_parameter_estimates, float original_parameter_estimate, int type, float level, int silence);
-RcppExport SEXP _fasteqa_bootstrap_ci(SEXP bootstrapped_parameter_estimatesSEXP, SEXP original_parameter_estimateSEXP, SEXP typeSEXP, SEXP levelSEXP, SEXP silenceSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< NumericVector >::type bootstrapped_parameter_estimates(bootstrapped_parameter_estimatesSEXP);
-    Rcpp::traits::input_parameter< float >::type original_parameter_estimate(original_parameter_estimateSEXP);
+    Rcpp::traits::input_parameter< double >::type original_parameter_estimate(original_parameter_estimateSEXP);
     Rcpp::traits::input_parameter< int >::type type(typeSEXP);
-    Rcpp::traits::input_parameter< float >::type level(levelSEXP);
+    Rcpp::traits::input_parameter< double >::type level(levelSEXP);
     Rcpp::traits::input_parameter< int >::type silence(silenceSEXP);
-    rcpp_result_gen = Rcpp::wrap(bootstrap_ci(bootstrapped_parameter_estimates, original_parameter_estimate, type, level, silence));
+    rcpp_result_gen = Rcpp::wrap(bootstrap_ci(bootstrapped_parameter_estimates, jackknife_parameter_estimates, original_parameter_estimate, type, level, silence));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -54,27 +120,39 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// estimate_absolute_dins
-List estimate_absolute_dins(List data, int silence);
-RcppExport SEXP _fasteqa_estimate_absolute_dins(SEXP dataSEXP, SEXP silenceSEXP) {
+// skewness
+double skewness(NumericVector x, bool na_rm);
+RcppExport SEXP _fasteqa_skewness(SEXP xSEXP, SEXP na_rmSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< List >::type data(dataSEXP);
-    Rcpp::traits::input_parameter< int >::type silence(silenceSEXP);
-    rcpp_result_gen = Rcpp::wrap(estimate_absolute_dins(data, silence));
+    Rcpp::traits::input_parameter< NumericVector >::type x(xSEXP);
+    Rcpp::traits::input_parameter< bool >::type na_rm(na_rmSEXP);
+    rcpp_result_gen = Rcpp::wrap(skewness(x, na_rm));
     return rcpp_result_gen;
 END_RCPP
 }
-// estimate_zeta
-List estimate_zeta(List data, int silence);
-RcppExport SEXP _fasteqa_estimate_zeta(SEXP dataSEXP, SEXP silenceSEXP) {
+// kurtosis
+double kurtosis(NumericVector x, bool na_rm);
+RcppExport SEXP _fasteqa_kurtosis(SEXP xSEXP, SEXP na_rmSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< NumericVector >::type x(xSEXP);
+    Rcpp::traits::input_parameter< bool >::type na_rm(na_rmSEXP);
+    rcpp_result_gen = Rcpp::wrap(kurtosis(x, na_rm));
+    return rcpp_result_gen;
+END_RCPP
+}
+// estimate_zeta_ols
+List estimate_zeta_ols(List data, int silence);
+RcppExport SEXP _fasteqa_estimate_zeta_ols(SEXP dataSEXP, SEXP silenceSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< List >::type data(dataSEXP);
     Rcpp::traits::input_parameter< int >::type silence(silenceSEXP);
-    rcpp_result_gen = Rcpp::wrap(estimate_zeta(data, silence));
+    rcpp_result_gen = Rcpp::wrap(estimate_zeta_ols(data, silence));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -91,44 +169,30 @@ BEGIN_RCPP
 END_RCPP
 }
 // fun_of_replicates
-List fun_of_replicates(List data, String fun, int silence);
-RcppExport SEXP _fasteqa_fun_of_replicates(SEXP dataSEXP, SEXP funSEXP, SEXP silenceSEXP) {
+List fun_of_replicates(List data, std::string fun);
+RcppExport SEXP _fasteqa_fun_of_replicates(SEXP dataSEXP, SEXP funSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< List >::type data(dataSEXP);
-    Rcpp::traits::input_parameter< String >::type fun(funSEXP);
-    Rcpp::traits::input_parameter< int >::type silence(silenceSEXP);
-    rcpp_result_gen = Rcpp::wrap(fun_of_replicates(data, fun, silence));
+    Rcpp::traits::input_parameter< std::string >::type fun(funSEXP);
+    rcpp_result_gen = Rcpp::wrap(fun_of_replicates(data, fun));
     return rcpp_result_gen;
 END_RCPP
 }
 // global_precision_estimates
-List global_precision_estimates(List data, int silence);
-RcppExport SEXP _fasteqa_global_precision_estimates(SEXP dataSEXP, SEXP silenceSEXP) {
+List global_precision_estimates(List data);
+RcppExport SEXP _fasteqa_global_precision_estimates(SEXP dataSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< List >::type data(dataSEXP);
-    Rcpp::traits::input_parameter< int >::type silence(silenceSEXP);
-    rcpp_result_gen = Rcpp::wrap(global_precision_estimates(data, silence));
-    return rcpp_result_gen;
-END_RCPP
-}
-// leave_one_out
-List leave_one_out(List data, int loo_id);
-RcppExport SEXP _fasteqa_leave_one_out(SEXP dataSEXP, SEXP loo_idSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< List >::type data(dataSEXP);
-    Rcpp::traits::input_parameter< int >::type loo_id(loo_idSEXP);
-    rcpp_result_gen = Rcpp::wrap(leave_one_out(data, loo_id));
+    rcpp_result_gen = Rcpp::wrap(global_precision_estimates(data));
     return rcpp_result_gen;
 END_RCPP
 }
 // merge_results
-List merge_results(List pb_data, List ce_data, List zeta_data, List imprecision_data, int rounding, bool include_imprecision_estimates, int silence);
+List merge_results(List pb_data, List ce_data, List zeta_data, Nullable<List> imprecision_data, int rounding, bool include_imprecision_estimates, int silence);
 RcppExport SEXP _fasteqa_merge_results(SEXP pb_dataSEXP, SEXP ce_dataSEXP, SEXP zeta_dataSEXP, SEXP imprecision_dataSEXP, SEXP roundingSEXP, SEXP include_imprecision_estimatesSEXP, SEXP silenceSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
@@ -136,7 +200,7 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< List >::type pb_data(pb_dataSEXP);
     Rcpp::traits::input_parameter< List >::type ce_data(ce_dataSEXP);
     Rcpp::traits::input_parameter< List >::type zeta_data(zeta_dataSEXP);
-    Rcpp::traits::input_parameter< List >::type imprecision_data(imprecision_dataSEXP);
+    Rcpp::traits::input_parameter< Nullable<List> >::type imprecision_data(imprecision_dataSEXP);
     Rcpp::traits::input_parameter< int >::type rounding(roundingSEXP);
     Rcpp::traits::input_parameter< bool >::type include_imprecision_estimates(include_imprecision_estimatesSEXP);
     Rcpp::traits::input_parameter< int >::type silence(silenceSEXP);
@@ -145,8 +209,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // predict_eqa
-List predict_eqa(List data, List new_data, List imprecision_estimates, int R, float R_ratio, String method, float level, int rounding);
-RcppExport SEXP _fasteqa_predict_eqa(SEXP dataSEXP, SEXP new_dataSEXP, SEXP imprecision_estimatesSEXP, SEXP RSEXP, SEXP R_ratioSEXP, SEXP methodSEXP, SEXP levelSEXP, SEXP roundingSEXP) {
+List predict_eqa(List data, List new_data, List imprecision_estimates, int R, double R_ratio, String method, double level, bool allow_reverse_regression, int rounding);
+RcppExport SEXP _fasteqa_predict_eqa(SEXP dataSEXP, SEXP new_dataSEXP, SEXP imprecision_estimatesSEXP, SEXP RSEXP, SEXP R_ratioSEXP, SEXP methodSEXP, SEXP levelSEXP, SEXP allow_reverse_regressionSEXP, SEXP roundingSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -154,50 +218,28 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< List >::type new_data(new_dataSEXP);
     Rcpp::traits::input_parameter< List >::type imprecision_estimates(imprecision_estimatesSEXP);
     Rcpp::traits::input_parameter< int >::type R(RSEXP);
-    Rcpp::traits::input_parameter< float >::type R_ratio(R_ratioSEXP);
+    Rcpp::traits::input_parameter< double >::type R_ratio(R_ratioSEXP);
     Rcpp::traits::input_parameter< String >::type method(methodSEXP);
-    Rcpp::traits::input_parameter< float >::type level(levelSEXP);
+    Rcpp::traits::input_parameter< double >::type level(levelSEXP);
+    Rcpp::traits::input_parameter< bool >::type allow_reverse_regression(allow_reverse_regressionSEXP);
     Rcpp::traits::input_parameter< int >::type rounding(roundingSEXP);
-    rcpp_result_gen = Rcpp::wrap(predict_eqa(data, new_data, imprecision_estimates, R, R_ratio, method, level, rounding));
-    return rcpp_result_gen;
-END_RCPP
-}
-// resample_fun_data
-List resample_fun_data(List data, int make_unique);
-RcppExport SEXP _fasteqa_resample_fun_data(SEXP dataSEXP, SEXP make_uniqueSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< List >::type data(dataSEXP);
-    Rcpp::traits::input_parameter< int >::type make_unique(make_uniqueSEXP);
-    rcpp_result_gen = Rcpp::wrap(resample_fun_data(data, make_unique));
-    return rcpp_result_gen;
-END_RCPP
-}
-// resample_samples
-List resample_samples(List data, int silence);
-RcppExport SEXP _fasteqa_resample_samples(SEXP dataSEXP, SEXP silenceSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< List >::type data(dataSEXP);
-    Rcpp::traits::input_parameter< int >::type silence(silenceSEXP);
-    rcpp_result_gen = Rcpp::wrap(resample_samples(data, silence));
+    rcpp_result_gen = Rcpp::wrap(predict_eqa(data, new_data, imprecision_estimates, R, R_ratio, method, level, allow_reverse_regression, rounding));
     return rcpp_result_gen;
 END_RCPP
 }
 // residuals_eqa
-List residuals_eqa(List data, List imprecision_estimates, String method, int studentize, bool invalid_NA);
-RcppExport SEXP _fasteqa_residuals_eqa(SEXP dataSEXP, SEXP imprecision_estimatesSEXP, SEXP methodSEXP, SEXP studentizeSEXP, SEXP invalid_NASEXP) {
+List residuals_eqa(const List& data, const List& imprecision_estimates, const String& method, bool studentize, bool unit_sd, bool invalid_NA);
+RcppExport SEXP _fasteqa_residuals_eqa(SEXP dataSEXP, SEXP imprecision_estimatesSEXP, SEXP methodSEXP, SEXP studentizeSEXP, SEXP unit_sdSEXP, SEXP invalid_NASEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< List >::type data(dataSEXP);
-    Rcpp::traits::input_parameter< List >::type imprecision_estimates(imprecision_estimatesSEXP);
-    Rcpp::traits::input_parameter< String >::type method(methodSEXP);
-    Rcpp::traits::input_parameter< int >::type studentize(studentizeSEXP);
+    Rcpp::traits::input_parameter< const List& >::type data(dataSEXP);
+    Rcpp::traits::input_parameter< const List& >::type imprecision_estimates(imprecision_estimatesSEXP);
+    Rcpp::traits::input_parameter< const String& >::type method(methodSEXP);
+    Rcpp::traits::input_parameter< bool >::type studentize(studentizeSEXP);
+    Rcpp::traits::input_parameter< bool >::type unit_sd(unit_sdSEXP);
     Rcpp::traits::input_parameter< bool >::type invalid_NA(invalid_NASEXP);
-    rcpp_result_gen = Rcpp::wrap(residuals_eqa(data, imprecision_estimates, method, studentize, invalid_NA));
+    rcpp_result_gen = Rcpp::wrap(residuals_eqa(data, imprecision_estimates, method, studentize, unit_sd, invalid_NA));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -213,23 +255,42 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// sim_eqa_data
+List sim_eqa_data(Nullable<List> parameters, int type, bool AR, bool include_parameters);
+RcppExport SEXP _fasteqa_sim_eqa_data(SEXP parametersSEXP, SEXP typeSEXP, SEXP ARSEXP, SEXP include_parametersSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Nullable<List> >::type parameters(parametersSEXP);
+    Rcpp::traits::input_parameter< int >::type type(typeSEXP);
+    Rcpp::traits::input_parameter< bool >::type AR(ARSEXP);
+    Rcpp::traits::input_parameter< bool >::type include_parameters(include_parametersSEXP);
+    rcpp_result_gen = Rcpp::wrap(sim_eqa_data(parameters, type, AR, include_parameters));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_fasteqa_BCa_bootstrap_ci", (DL_FUNC) &_fasteqa_BCa_bootstrap_ci, 5},
-    {"_fasteqa_bootstrap_ci", (DL_FUNC) &_fasteqa_bootstrap_ci, 5},
-    {"_fasteqa_count_samplewise_replicates", (DL_FUNC) &_fasteqa_count_samplewise_replicates, 4},
-    {"_fasteqa_estimate_absolute_dins", (DL_FUNC) &_fasteqa_estimate_absolute_dins, 2},
-    {"_fasteqa_estimate_zeta", (DL_FUNC) &_fasteqa_estimate_zeta, 2},
-    {"_fasteqa_estimate_zeta_deming", (DL_FUNC) &_fasteqa_estimate_zeta_deming, 2},
-    {"_fasteqa_fun_of_replicates", (DL_FUNC) &_fasteqa_fun_of_replicates, 3},
-    {"_fasteqa_global_precision_estimates", (DL_FUNC) &_fasteqa_global_precision_estimates, 2},
+    {"_fasteqa_resample_samples", (DL_FUNC) &_fasteqa_resample_samples, 1},
+    {"_fasteqa_resample_fun_of_samples", (DL_FUNC) &_fasteqa_resample_fun_of_samples, 1},
+    {"_fasteqa_resample_global_precision_estimates", (DL_FUNC) &_fasteqa_resample_global_precision_estimates, 1},
+    {"_fasteqa_resample_zeta_estimates", (DL_FUNC) &_fasteqa_resample_zeta_estimates, 1},
     {"_fasteqa_leave_one_out", (DL_FUNC) &_fasteqa_leave_one_out, 2},
+    {"_fasteqa_loo_global_precision_estimates", (DL_FUNC) &_fasteqa_loo_global_precision_estimates, 2},
+    {"_fasteqa_loo_zeta_estimates", (DL_FUNC) &_fasteqa_loo_zeta_estimates, 2},
+    {"_fasteqa_bootstrap_ci", (DL_FUNC) &_fasteqa_bootstrap_ci, 6},
+    {"_fasteqa_count_samplewise_replicates", (DL_FUNC) &_fasteqa_count_samplewise_replicates, 4},
+    {"_fasteqa_skewness", (DL_FUNC) &_fasteqa_skewness, 2},
+    {"_fasteqa_kurtosis", (DL_FUNC) &_fasteqa_kurtosis, 2},
+    {"_fasteqa_estimate_zeta_ols", (DL_FUNC) &_fasteqa_estimate_zeta_ols, 2},
+    {"_fasteqa_estimate_zeta_deming", (DL_FUNC) &_fasteqa_estimate_zeta_deming, 2},
+    {"_fasteqa_fun_of_replicates", (DL_FUNC) &_fasteqa_fun_of_replicates, 2},
+    {"_fasteqa_global_precision_estimates", (DL_FUNC) &_fasteqa_global_precision_estimates, 1},
     {"_fasteqa_merge_results", (DL_FUNC) &_fasteqa_merge_results, 7},
-    {"_fasteqa_predict_eqa", (DL_FUNC) &_fasteqa_predict_eqa, 8},
-    {"_fasteqa_resample_fun_data", (DL_FUNC) &_fasteqa_resample_fun_data, 2},
-    {"_fasteqa_resample_samples", (DL_FUNC) &_fasteqa_resample_samples, 2},
-    {"_fasteqa_residuals_eqa", (DL_FUNC) &_fasteqa_residuals_eqa, 5},
+    {"_fasteqa_predict_eqa", (DL_FUNC) &_fasteqa_predict_eqa, 9},
+    {"_fasteqa_residuals_eqa", (DL_FUNC) &_fasteqa_residuals_eqa, 6},
     {"_fasteqa_simulate_eqa_data", (DL_FUNC) &_fasteqa_simulate_eqa_data, 2},
+    {"_fasteqa_sim_eqa_data", (DL_FUNC) &_fasteqa_sim_eqa_data, 4},
     {NULL, NULL, 0}
 };
 

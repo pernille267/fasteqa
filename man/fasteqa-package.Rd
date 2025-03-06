@@ -1,34 +1,48 @@
 \name{fasteqa-package}
-\alias{fasteqa-package}
 \alias{fasteqa}
 \docType{package}
 \title{
-  A short title line describing what the package does
+  Utility Functions for External Quality Assessment Material Data Analysis
 }
 \description{
-  A more detailed description of what the package does. A length
-  of about one to five lines is recommended.
+  Streamline commutability evaluation data analysis by providing functions
+  that effectively calculates relevant statistics. It also provides functions
+  that allow standardization of output structure. This package can be viewed
+  as backbone of the more general \code{commutability} package.
 }
 \details{
-  This section should provide a more detailed overview of how to use the
-  package, including the most important functions.
+  Key functions:
+  \itemize{
+    \item \code{predict_eqa()}: Model data and calculate estimated
+    prediction intervals.
+    \item \code{estimate_zeta_ols()}: Estimate \eqn{zeta} assuming a linear
+    relationship between the IVD-MDs in comparison.
+    \item \code{global_precision_estimates()}: Estimates repeatability
+    statistics for both IVD-MDs in comparison.
+    \item \code{bootstrap_ci()}: Estimating confidence intervals for
+    repeatability statistics and \eqn{\zeta}.
+    \item \code{merge_results()}: Merge individual components into a
+    single object.
+  }
+  
 }
 \author{
-Your Name, email optional.
+Pernille Kjeilen Fauskanger
 
-Maintainer: Your Name <your@email.com>
+Maintainer: Pernille Kjeilen Fauskanger <pernille.fauskanger@noklus.no>
 }
 \references{
-  This optional section can contain literature or other references for
-  background information.
+  Sandberg S. et al. (2023) for the IFCC Working Group on Commutability in Metrological Traceability, Recommendations for Setting a Criterion and Assessing Commutability of Sample Materials Used in External Quality Assessment/Proficiency Testing Schemes, \emph{Clinical Chemistry}. 69(11): 1227-1237.
+  \url{https://doi.org/10.1093/clinchem/hvad135}
+  
+  Fauskanger P.K., et al. (2025) Quantification of Difference in Nonselectivity Between In Vitro Diagnostic Medical Devices. \emph{Biometrical Journal}. 67: e70032.
+  \url{https://doi.org/10.1002/bimj.70032}
 }
 \keyword{ package }
 \seealso{
-  Optional links to other man pages
+  Useful links:
 }
 \examples{
-  \dontrun{
-     ## Optional simple examples of the most important functions
-     ## These can be in \dontrun{} and \donttest{} blocks.   
-  }
+  # 1
+  print(1)
 }

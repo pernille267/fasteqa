@@ -2,31 +2,61 @@
 % Please edit documentation in R/RcppExports.R
 \name{residuals_eqa}
 \alias{residuals_eqa}
-\title{Obtain the residuals based on data and imprecision estimates}
+\title{Calculate Model Residuals for External Quality Assessment Data}
 \arguments{
-\item{data}{A \code{list} or \code{data.table} that includes mean values of replicated clinical sample data, grouped by \code{SampleID}. The data for the two compared IVD-MDs under consideration should be found in the columns named \code{MP_A} and \code{MP_B}. The \code{SampleID} should be a character vector, whereas \code{MP_A} and \code{MP_B} must be numeric vectors.}
-
-\item{imprecision_estimates}{A \code{list} or \code{data.table} carrying imprecision estimates for IVD-MD, ideally matching those provided by the \code{global_precision_estimates()} function. A non-missing positive value for \code{lambda} is the minimum requirement.}
-
-\item{method}{A \code{character} string specifying the linear regression model applied for obtaining the residuals and fitted values. The default value is \code{fg}. The possible values for \code{method} include:
+\item{data}{A list or data.table containing:
 \itemize{
-  \item{\code{fg: }}{Refers to Deming regression, incorporating elements from the work of W. Fuller and J. Gillard.}
-  \item{\code{clsi: }}{Refers to Deming regression, based on the CLSI EP14 standard.}
-  \item{\code{ols: }}{Represents ordinary least squares regression.}
+   \item \code{SampleID}: A \code{character} vector of sample identifiers
+   \item \code{MP_A}: A \code{numeric} vector of measurements from method A (response)
+   \item \code{MP_B}: A \code{numeric} vector of measurements from method B (predictor)
 }}
 
-\item{studentize}{An \code{integer}. When set to \code{1} (default), the residuals get studentized, implying the mean of the residuals is subtracted from each residual and then divided by the standard deviation of the residuals. If set to \code{0}, residuals are not studentized. Studentized residuals can be beneficial if there is a need to compare the residuals' distribution to the standard normal distribution or a specific t-distribution.}
+\item{imprecision_estimates}{A \code{list} or \code{data.table} containing
+\itemize{
+   \item \code{lambda}: A positive numeric value representing the repeatability
+                        variance ratio between response and predictor.
+}
+Can be calculated using the \code{global_precision_estimates()} function.}
+
+\item{method}{A \code{character} string specifying the linear regression model
+applied for obtaining the residuals and fitted values.  Options are:
+\itemize{
+   \item \code{'fg'} (default): Deming regression, incorporating results from W. Fuller and J. Gillard.
+   \item \code{'clsi'}: Deming regression based on the CLSI EP14 standard.
+   \item \code{'ols'}: Ordinary Least Squares regression.
+}}
+
+\item{studentize}{A non-missing \code{logical} value. If \code{TRUE} (default),
+the standardized residuals are computed. Here, this means that the sample mean
+of the residuals is subtracted from each residual and this result is divided by
+the sample standard deviation of the residuals. Raw residuals are returned
+if this is set to \code{FALSE}. Standardized residuals can be
+beneficial if one requires to compare the residuals' distribution to the standard
+normal distribution or a particular student t-distribution.}
+
+\item{unit_sd}{A non-missing \code{logical} value. If \code{TRUE}, the standard
+deviation of the residuals are assumed to be equal to \code{1}.}
+
+\item{invalid_NA}{A non-missing \code{logical} value. If \code{TRUE},
+a \code{list} is \code{NA}-values is returned instead of throwing
+an error.}
 }
 \value{
-This function returns a \code{list} comprising two numeric vectors named \code{residuals} and \code{fitted}. These are the residuals and fitted values, respectively, based on the input \code{data}, \code{imprecision_estimates}, and \code{method}.
+This function returns a \code{list} comprising two \code{numeric} vectors named
+\code{residuals} and \code{fitted}. These are the residuals and fitted values, respectively,
+based on the input \code{data}, \code{imprecision_estimates}, and \code{method}.
 }
 \description{
-This function efficiently extracts the residuals and fitted values based on the provided \code{data}, \code{imprecision_estimates}, and \code{method}.
+This function computes residuals and fitted values for external quality assessment (EQA)
+clinical sample data using various regression methods. It is designed to work with
+paired measurement results from two in vitro diagnostic medical devices (IVD-MDs).
 }
 \details{
-Obtain the residuals based on data and imprecision estimates
-
-While the outcome differences between the three provided methods may be minute, they can still be noteworthy. Suppose 'n' is the count of unique clinical samples. The \code{fg} method estimates latent concentration values and utilizes n - 1 degrees of freedom. In contrast, \code{clsi} does not estimate latent variables and uses 'n' degrees of freedom. The model associated with \code{ols} overlooks the imprecision in \code{MP_B}.
+The function handles missing values by removing them before calculations. It supports
+three regression methods, each with slightly different approaches to calculating residuals
+and fitted values. The \code{'fg'} method is generally recommended.
+While the outcome differences between the three avaiable methods may be small,
+they can still be noteworthy in some cases.
 }
 \examples{
 \dontrun{
@@ -40,4 +70,14 @@ While the outcome differences between the three provided methods may be minute, 
   # Extracting raw residuals based on the clsi Deming regression approach
   residuals_eqa(mean_of_replicates_data, imprecision, "clsi", 0)
 }
+
+}
+\references{
+Fuller, W. A. (1987). Measurement Error Models. John Wiley & Sons.
+
+Gillard J. W. (2010). An Overview of Linear Structural Models in Errors in
+Variables Regression. REVSTAT-Statistical Journal 8(1), 57-80
+}
+\seealso{
+\code{\link{global_precision_estimates}} for calculating imprecision estimates
 }

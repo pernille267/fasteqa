@@ -2,42 +2,87 @@
 % Please edit documentation in R/RcppExports.R
 \name{bootstrap_ci}
 \alias{bootstrap_ci}
-\title{Estimate simple bootstrap confidence intervals}
+\title{Simple Bootstrap Confidence Interval Estimation}
 \arguments{
-\item{bootstrapped_parameter_estimates}{A \code{numeric vector} storing bootstrapped estimates of the target parameter. A couple of missing values are allowed and will be removed if present.}
+\item{bootstrapped_parameter_estimates}{A \code{numeric} vector containing 
+resampled parameter estimates. Missing values (\code{NA}) are automatically 
+removed without a warning. Must contain at least \eqn{2} valid observations.}
 
-\item{original_parameter_estimate}{A \code{double} representing the original point estimate of the target parameter. A missing value is not allowed.}
+\item{jackknife_parameter_estimates}{A \code{numeric} vector containing Jackknife
+estimates of the target parameter.
+Missing values (\code{NA}) will be removed automatically.}
 
-\item{type}{An \code{integer} that refers to the type of bootstrap confidence interval to be estimated. Valid inputs include:
+\item{original_parameter_estimate}{A \code{double} representing the parameter 
+estimate from the original sample. Must be a single non-missing value.}
+
+\item{type}{An `integer` specifying the confidence interval method:
 \itemize{
-  \item{\code{1: }}{Standard normal bootstrap confidence interval}
-  \item{\code{2: }}{Basic bootstrap confidence interval}
-  \item{\code{3: }}{Percentile bootstrap confidence interval}
+  \item \code{1} - Standard normal bootstrap confidence interval
+  \item \code{2} - Basic bootstrap confidence interval
+  \item \code{3} - Percentile bootstrap confidence interval
+  \item \code{4} - Bias and skewness corrected bootstrap confidence interval
 }}
 
-\item{level}{A \code{double} between 0 and 1, indicating the desired confidence level for the estimated bootstrap confidence interval of the target parameter. Defaulting to \code{0.95}.}
+\item{level}{A \code{double} between 0.50 and 0.99 indicating the confidence level. 
+Default: 0.95 (95\% interval)}
 
-\item{silence}{An \code{integer} controlling the level of progress reporting for debugging and analysis. Set to \code{-1} or \code{0} for detailed reports. Defaults to \code{1} to suppress output.}
+\item{silence}{An \code{integer} controlling verbosity:
+\itemize{
+  \item \code{-1} - Detailed debug output
+  \item \code{0} - Basic progress reporting
+  \item \code{1} - No output (default)
+}}
 }
 \value{
-A \code{numeric vector} with two entries: the lower and upper bounds of the bootstrap confidence interval, respectively.
+A \code{numeric} vector \code{x} of length 2 containing:
+\itemize{
+  \item \code{x[1]} - Lower confidence bound
+  \item \code{x[2]} - Upper confidence bound
+}
 }
 \description{
-Estimation of bootstrap confidence intervals for a parameter of interest based on \code{bootstrapped_parameter_estimates}, \code{original_parameter_estimate}, \code{type} and \code{level}.
+Calculates nonparametric bootstrap confidence intervals using four common methods.
+Suitable for situations where only bootstrap replicates and the original estimate 
+are available.
 }
 \details{
-Estimate simple bootstrap confidence intervals
+Methodological Notes
+\itemize{
+  \item Standard Normal (Type 1): Assumes normal distribution of bootstrap estimates
+  \item Basic (Type 2): Computes interval using bootstrap distribution's quantiles
+  \item Percentile (Type 3): Directly uses empirical quantiles of bootstrap estimates
+  \item BCa (Type 4): Uses bias- and skewness corrected bootstrap quantiles
+}
 
-To get an adequate estimate of the theoretical confidence interval for the target parameter, it is essential that the original data represents the underlying distribution for the population parameter. More data typically corresponds with larger probability of our data being representative. For second-order accurate and transformation respective confidence intervals, you may employ \code{BCa_bootstrap_ci()} instead. Note that \code{BCa_bootstrap_ci()} requires jack knife estimates of the parameter of interest as well as bootstrap estimates
+The function automatically removes \code{NA} values from bootstrap estimates without a warning.
+For reliable results, use \eqn{\geq 1000} bootstrap replicates.
+BCa intervals require jackknife estimates.
 }
 \examples{
-\dontrun{
-  fictional_original_estimate <- 2.1
-  fictional_bootstrap_estimates <- runif(n = 1e3, min = 0.5, max = 2.5)
-  bootstrap_ci(fictional_bootstrap_estimates,
-               fictional_original_estimate,
-               type = 3,
-               level = 0.95,
-               silence = 1)
+# Simulated dataset
+true_mean <- 5.2
+bootstrap_means <- rnorm(1000, mean = 5.0, sd = 0.5)
+jackknife_means <- rnorm(25, mean = 5.1, sd = 0.75)
+
+# Calculate 90\% percentile interval
+bootstrap_ci(
+  bootstrapped_parameter_estimates = bootstrap_means,
+  jackknife_parameter_estimates = bootstrap_means,
+  original_parameter_estimate = true_mean,
+  type = 3,
+  level = 0.90
+)
+
+# Calculate 95\% BCa interval
+bootstrap_ci(
+  bootstrapped_parameter_estimates = bootstrap_means,
+  jackknife_parameter_estimates = jackknife_means,
+  original_parameter_estimate = true_mean,
+  type = 4,
+  level = 0.95
+)
+
 }
+\references{
+Bootstrap methods and their application (Davison & Hinkley, 1997)
 }
