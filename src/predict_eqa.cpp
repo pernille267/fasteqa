@@ -2,120 +2,209 @@
 
 using namespace Rcpp;
 
-//' @title Prediction Interval Estimation for EQA Data via Deming or OLS Regression
+//' @title Prediction Interval Estimation for EQA Data via Deming or
+//'        OLS Regression
 //' @name predict_eqa
 //'
 //' @description
-//' This function estimates pointwise prediction intervals for
-//' External Quality Assessment (EQA) data by applying either
-//' Deming (\code{method = 'fg'} or \code{method = 'clsi'}) or
+//' This function estimates prediction intervals for evaluated material data by
+//' applying either Deming (\code{method = 'fg'} or \code{method = 'clsi'}) or
 //' Ordinary Least Squares (\code{method = 'ols'}) regression methodologies.
-//' It is specifically designed for a single In Vitro Diagnostic Medical Device (IVD-MD) comparison.
-//' For processing multiple IVD-MD comparisons simultaneously, consider using the
-//' \code{estimate_prediction_data()} function from the \code{commutability} package,
-//' which executes this function on a per IVD-MD comparison basis.   
 //'
-//' @param data A \code{list} or \code{data.table} representing mean-of-replicates clinical sample data
-//'        with the \code{list} elements or \code{data.table} columns: \code{SampleID}, \code{MP_A}, and \code{MP_B}.
-//' @param new_data A \code{list} or \code{data.table} representing mean-of-replicates EQA material / reference material data.
-//'        This should at least include \code{MP_B} but may also contain \code{SampleID} and \code{MP_A} depending on the desired output structure:
-//' \itemize{
-//'   \item \code{Minimum requirement}: \code{new_data} must include \code{MP_B}.
-//'   \item \code{Inside checks performed}: \code{new_data} must include both \code{MP_B} and \code{MP_A}.
-//'   \item \code{Sample-wise prediction}: \code{new_data} must include \code{MP_B} and \code{SampleID}.
-//' }
-//' @param imprecision_estimates A \code{list} or \code{data.table}.
-//'        Must include \code{Var_B} and \code{lambda}. See details.
-//' @param R An \code{integer} indicating the average number of replicates on which new_data is based.
-//'        The convenience function \code{count_samplewise_replicates()} can be employed to generate
-//'        suitable input for this parameter directly.
-//' @param R_ratio An \code{double}. The ratio of the number of replicates used in \code{new_data} and \code{data}.
-//'        Only relevant if \code{method = 'fg'} or \code{method = 'ols'}.
-//'        If the same number of replicates is used for measurements in \code{data} and \code{new_data},
-//'        use the default value of \code{R_ratio = 1}.
-//' @param method A \code{character} string. The method used to estimate the prediction intervals.
-//'        The default is \code{'fg'}. Current possible prediction interval estimation approaches are:
-//' \itemize{
-//'   \item \code{fg: } Implements standard Deming regression with prediction intervals calculated using the 'Fuller & Gillard' approach. See details.
-//'   \item \code{clsi: } Utilizes standard Deming regression, with prediction intervals derived from the CLSI method. See details.
-//'   \item \code{ols: } Implements Ordinary Least Squares regression.
-//' }
-//' @param level A \code{double}. The nominal confidence level for the prediction intervals.
-//'        Must be a value between \code{0} and \code{1}. The default setting is \code{0.99}.
-//'        Please adjust for simultaneous testing if pointwise prediction intervals are used for
-//'        classifying more than one EQA material / reference material in the same IVD-MD comparison.
-//' @param allow_reverse_regression A \code{logical} value. If set to \code{TRUE}, and \code{method = 'ols'},
-//'        the response and predictor change roles if \code{lambda < 1}.
-//' @param rounding An \code{integer} specifying the desired number of decimal places for the predictions and prediction intervals.
-//'        The default setting is \code{3L}, offering sufficient precision for most applications.
-//'        The maximum limit is \code{12L}.
+//' @param data A \code{list} or \code{data.table}. Must contain:
+//'             \itemize{
+//'                 \item \code{SampleID: } A \code{character} vector. The
+//'                 clinical sample identifiers.
+//'                 \item \code{MP_A: } A \code{numeric} vector. The means of
+//'                 replicated measurements from IVD-MD \code{MP_A} (response).
+//'                 \item \code{MP_B: } A \code{numeric} vector. The means of
+//'                 replicated measurements from IVD-MD \code{MP_B} (predictor).
+//'             }
+//' @param new_data A \code{list} or \code{data.table}. Can contain:
+//'                 \itemize{
+//'                     \item \code{SampleID: } A \code{character} vector. The
+//'                     evaluated material sample identifiers. Optional.
+//'                     \item \code{MP_A: } A \code{numeric} vector. The means
+//'                     of replicated measurements from IVD-MD \code{MP_A}.
+//'                     Optional.
+//'                     \item \code{MP_B: } A \code{numeric} vector. The means
+//'                     of replicated measurements from IVD-MD \code{MP_B}.
+//'                     Mandatory.
+//'                 }
+//'                 The structure of \code{new_data} determines the output
+//'                 type. For constructing prediction band (PB) data, include
+//'                 only \code{MP_B}. For constructing commutability
+//'                 evaluation data, include all three. Inside checks can only
+//'                 be performed if \code{MP_A} is included.
+//'                
+//' @param imprecision_estimates A \code{list} or \code{data.table}. Must
+//'                              include:
+//'                              \itemize{
+//'                                 \item \code{Var_B: } Pooled variance 
+//'                                       estimate of \eqn{\sigma_h^2}.
+//'                                 \item \code{lambda: } Estimate of
+//'                                       \eqn{\sigma_v^2 / \sigma_h^2}. 
+//'                              }
+//'                              See details.
+//' @param R An \code{integer}. The average number of replicates on which
+//'          \code{new_data} is based. \code{count_samplewise_replicates()} can
+//'          be employed to generate a suitable input for this parameter
+//'          directly.
+//' @param R_ratio A \code{double}. The ratio of the number of replicates used
+//'                in \code{new_data} and \code{data}. Only relevant if
+//'                \code{method = 'fg'} or \code{method = 'ols'}. Defaults to
+//'                \code{1L}.
+//' @param method A \code{character} string. The desired method for estimating
+//'               prediction intervals. Possible prediction estimation
+//'               approaches includes:
+//'               \itemize{
+//'                   \item \code{fg: } Implements standard Deming regression
+//'                         with prediction intervals calculated using the
+//'                         'Fuller & Gillard' approach. See details.
+//'                   \item \code{clsi: } Utilizes standard Deming regression,
+//'                         with prediction intervals derived from the CLSI
+//'                         method. See details.
+//'                   \item \code{ols: } Implements Ordinary Least Squares
+//'                         regression.
+//'               }
+//' @param level A \code{double}. Must be between \code{0} and \code{1}. The
+//'              nominal confidence level for the estimated prediction
+//'              intervals. Defaults to \code{0.99} (\eqn{99\%}).
+//' @param allow_reverse_regression A \code{logical} value. If \code{TRUE} and
+//'                                 \code{method = 'ols'}, the response and
+//'                                 predictor change roles if
+//'                                 \code{lambda < 0.5}. Defaults to
+//'                                 \code{FALSE}.
+//' @param rounding An \code{integer}. The desired number of decimal places for
+//'                 the predictions and prediction intervals. Defaults to
+//'                 \code{3L}, offering sufficient precision in relevant
+//'                 applications.
 //'
 //' @details
-//' For commutability evaluation, inclusion of all \code{SampleID}, \code{MP_A}, and \code{MP_B}
-//' in \code{new_data} is required. If only prediction bands are required, one only need to include \code{MP_B} part of \code{new_data}.
+//' For commutability evaluation purposes, inclusion of all \code{SampleID},
+//' \code{MP_A}, and \code{MP_B} in \code{new_data} is required. 
+//' If only prediction band data is required, inclusion of \code{MP_B} in
+//' \code{new_data} is the sole requirement.
 //' 
 //' Imprecision Estimates
 //' 
-//' Estimating prediction intervals may require certain imprecision estimates, which can be estimated from the raw data.
-//' Which imprecision estimates that are required depends on which method that is used to construct the prediction intervals.
-//' For \code{method = 'fg'} or \code{method = 'ols'}, \code{lambda} is required. This estimate is calculated by
+//' Estimating prediction intervals may require certain imprecision estimates,
+//' which can be estimated from the raw data. Which imprecision estimates that
+//' are required depends on which method that is used to construct the
+//' prediction intervals. For \code{method = 'fg'} or \code{method = 'ols'},
+//' \code{lambda} is required. \code{lambda} is calculated using
 //' 
-//' \eqn{\lambda = \frac{\hat{\sigma}_v^2}{\hat{\sigma}_h^2}}
+//' \eqn{\lambda = \frac{\hat{\sigma}_v^2}{\hat{\sigma}_h^2}},
 //' 
-//' where \eqn{\hat{\sigma}_v^2} and \eqn{\hat{\sigma}_h^2} are pooled variances.
-//' If differences in non-selectivity (DINS) or equation error cannot be ruled out,
-//' \eqn{\lambda} will generally underestimate the true \eqn{\Lambda}. Do not forget this.
+//' where \eqn{\hat{\sigma}_v^2} and \eqn{\hat{\sigma}_h^2} are pooled 
+//' variance estimates. If differences in non-selectivity (DINS) or equation
+//' error cannot be ruled out, \eqn{\lambda} will generally underestimate the
+//' true parameter \eqn{\Lambda}. Keep this in mind!
 //' 
-//' For \code{method = 'clsi'}, both \code{Var_B} and \code{lambda} are required. \code{lambda} is calculated as before,
-//' and \code{Var_B} is just \eqn{\hat{\sigma}_h^2}.
+//' For \code{method = 'clsi'}, both \code{Var_B} and \code{lambda} are
+//' required. \code{lambda} is calculated as before, and \code{Var_B} is just
+//' \eqn{\hat{\sigma}_h^2}.
 //' 
-//' Note that both \code{lambda} and \code{Var_B} always must be given. However, if one of them
-//' is not necessary to estimate prediction intervals, it may take an arbitrary value.
-//' It is nevertheless recommended to always include actual values \code{lambda} and \code{Var_B},
+//' Note that both \code{lambda} and \code{Var_B} always must be given as
+//' input. However, if one of them is not necessary to estimate prediction
+//' intervals, it may take an arbitrary value. It is nevertheless recommended
+//' to always include actual values \code{lambda} and \code{Var_B},
 //' independently of whether they are actual used or not.
 //' 
-//' Note also that \code{global_precision_estimates()} can be used to calculate both
-//' \code{lambda} and \code{Var_B}.
+//' Note also that \code{global_precision_estimates()} can be used to calculate
+//' both \code{lambda} and \code{Var_B}.
 //' 
-//'
 //' @return 
-//' A \code{list} comprising estimated prediction interval data based on user inputs.
-//' This list will contain the following elements:
+//' A \code{list}. The resulting estimated prediction interval data based on
+//' the function inputs. Contain the following elements:
 //' \itemize{
-//'     \item \code{SampleID: } The ID(s) of the evaluated material(s).
-//'     \item \code{MP_B: } The measurement result(s) of the second IVD-MD in the \code{MP_A} - \code{MP_B} comparison (predictor).
-//'     \item \code{MP_A: } The measurement result(s) of the first IVD-MD in the \code{MP_A} - \code{MP_B} comparison (response).
-//'     \item \code{prediction: } The predicted value(s) of \code{MP_A} given the value(s) of \code{MP_B}.
-//'     \item \code{lwr: } The lower limit(s) of the estimated prediction interval(s) of \code{MP_A} given the value(s) of \code{MP_B}.
-//'     \item \code{upr: } The upper limit(s) of the estimated prediction interval(s) of \code{MP_A} given the value(s) of \code{MP_B}.
-//'     \item \code{inside: } Inside checks. If \code{1}, \code{MP_A} is inside the estimated prediction interval for \code{MP_A}.
-//'     On the other hand, if \code{0}, \code{MP_A} is outside the estimated prediction interval for \code{MP_A}.
+//'     \item \code{SampleID: } A \code{character} vector. The ID(s) of the
+//'           evaluated material(s).
+//'     \item \code{MP_B: } A \code{numeric} vector. The measurement result(s)
+//'           of IVD-MD \code{MP_B} (predictor).
+//'     \item \code{MP_A: } A \code{numeric} vector. The measurement result(s)
+//'           of IVD-MD \code{MP_A} (response).
+//'     \item \code{prediction: } A \code{numeric} vector. The predicted
+//'           value(s) of \code{MP_A} given the value(s) of \code{MP_B}.
+//'     \item \code{lwr: } A \code{numeric} vector. The lower limit(s) of the
+//'           estimated prediction interval(s) of \code{MP_A} given the
+//'           value(s) of \code{MP_B}.
+//'     \item \code{upr: } A \code{numeric} vector. The upper limit(s) of the
+//'            estimated prediction interval(s) of \code{MP_A} given the
+//'            value(s) of \code{MP_B}.
+//'     \item \code{inside: } An \code{integer} vector. The Inside checks.
+//'           \code{1} if \code{MP_A} is inside the estimated prediction
+//'           interval for \code{MP_A}. Otherwise, \code{0}.
 //' }
-//' The output \code{list} may be converted to \code{data.table} by employing the \code{setDT()} method from the \code{data.table} package in R.
+//' Note: the output \code{list} may be converted to \code{data.table} by using
+//' the \code{setDT()} function from the \code{data.table} package in R.
 //'
-//' @examples \dontrun{
+//' @examples
+//' # Required packages
 //' library(fasteqa)
-//' # Simulation parameters for clinical sample data
-//' training_parameters <- list(n = 25, R = 3, cvx = 0.01, cvy = 0.015, cil = 10, ciu = 70)
-//' # Simulation parameters for external quality assessment material data (commutable materials)
-//' test_parameters <- list(n = 5, R = 3, cvx = 0.01, cvy = 0.015, cil = 10, ciu = 70)
-//' # Simulation of clinical sample data using the simulation parameters 'training_parameters'
-//' training_data <- simulate_eqa_data(training_parameters)
-//' # Simulation of external quality assessment material data based on 'test_parameters'
-//' test_data <- simulate_eqa_data(test_parameters)
-//' # Convert ID columns to character type because this is the type accepted
-//' training_data$SampleID <- as.character(training_data$SampleID)
-//' training_data$ReplicateID <- as.character(training_data$ReplicateID)
-//' # Estimate imprecision estimates
-//' imprecision <- global_precision_estimates(training_data)
+//' library(data.table)
+//' 
+//' # Read data and convert to data.table
+//' test_data_example <- as.data.table(test_data)
+//' 
+//' # Log-transform data
+//' test_data_example[, MP_A := log(MP_A)]
+//' test_data_example[, MP_B := log(MP_B)]
+//' 
+//' # Use one of the clinical samples as a fictive evaluated material sample
+//' test_cs_data <- test_data_example[SampleID != "1"]
+//' test_eq_data <- test_data_example[SampleID == "1"]
+//' 
+//' # Estimate repeatability uncertainty statistics
+//' impr_data <- global_precision_estimates(test_cs_data)
+//' 
 //' # Calculate mean-of-replicates data
-//' mean_of_replicates_training_data <- fun_of_replicates(training_data)
-//' mean_of_replicates_test_data <- fun_of_replicates(test_data)
-//' # Estimate prediction intervals using method = 'fg', R = 3L and R_ratio = 1:
-//' prediction_intervals <- predict_eqa(mean_of_replicates_training_data,
-//'                                     mean_of_replicates_test_data,
-//'                                     imprecision)
-//' }
+//' test_cs_data <- test_cs_data[, fun_of_replicates(.SD)]
+//' test_eq_data <- test_eq_data[, fun_of_replicates(.SD)]
+//' 
+//' # Calculate 95% OLS commutability evaluation data
+//' ols_pi <- predict_eqa(data = test_cs_data,
+//'                       new_data = test_eq_data,
+//'                       imprecision_estimates = impr_data,
+//'                       method = "ols",
+//'                       level = 0.95,
+//'                       allow_reverse_regression = FALSE,
+//'                       rounding = 3L)
+//' 
+//' # Calculate 95% F-G Deming commutability evaluation data
+//' fg_pi <- predict_eqa(data = test_cs_data,
+//'                      new_data = test_eq_data,
+//'                      imprecision_estimates = impr_data,
+//'                      method = "fg",
+//'                      level = 0.95,
+//'                      allow_reverse_regression = FALSE,
+//'                      rounding = 3L)
+//' 
+//' # Calculate 95% CLSI EP14 Deming commutability evaluation data
+//' clsi_pi <- predict_eqa(data = test_cs_data,
+//'                       new_data = test_eq_data,
+//'                       imprecision_estimates = impr_data,
+//'                       method = "clsi",
+//'                       level = 0.95,
+//'                       allow_reverse_regression = FALSE,
+//'                       rounding = 3L)
+//' 
+//' # Convert to data.table objects
+//' lapply(X = list(ols_pi,
+//'                 fg_pi,
+//'                 clsi_pi),
+//'        FUN = setDT)
+//' 
+//' # Gather into one data.table
+//' pis <- rbindlist(list("ols" = ols_pi,
+//'                       "fg" = fg_pi,
+//'                       "clsi" = clsi_pi),
+//'                   idcol = "method")
+//' 
+//' # The result                  
+//' print(pis)
+//' 
+
 
 // [[Rcpp::export]]
 List predict_eqa(List data, List new_data, List imprecision_estimates,
@@ -125,6 +214,13 @@ List predict_eqa(List data, List new_data, List imprecision_estimates,
   // Extract required information from imprecision_estimates
   double lambda = imprecision_estimates["lambda"];
   double Var_B = imprecision_estimates["Var_B"];
+  
+  // Checks if lambda and Var_B are valid. If not, use ols instead.
+  if(ISNAN(lambda) || lambda <= 0.0 || ISNAN(Var_B) || Var_B <= 0.0){
+    if(method == "fg"){
+      method = "ols";  
+    }
+  }
   
   // Extract traning data
   NumericVector MP_A = data["MP_A"];

@@ -2,41 +2,108 @@
 % Please edit documentation in R/RcppExports.R
 \name{estimate_zeta_ols}
 \alias{estimate_zeta_ols}
-\title{Estimate differences in non-selectivity with zeta}
+\title{Quantify Differences in Non-selectivity Using \eqn{\hat{\zeta}}}
 \arguments{
-\item{data}{\code{list} or \code{data table} - Data with elements/columns \code{SampleID}, \code{ReplicateID}, \code{MP_A} and \code{MP_B}}
-
-\item{silence}{\code{integer} - Controls verbose. Allowing verbose, will slow down estimation of zeta. Thus, in general, it should not be used. There are three valid inputs:
+\item{data}{A \code{list} or \code{data.table}. Must contain:
 \itemize{
-  \item \code{1: } All progress reports are silenced. This is the default.
-  \item \code{0: } Estimation steps and temporary results are printed to the console
-  \item \code{< 0: } Debugging. Expert use only.
+  \item \code{SampleID: } A \code{character} vector. The
+        clinical sample identifiers.
+  \item \code{ReplicateID: } A \code{character} vector. The
+        replicate measurement identifiers.
+  \item \code{MP_A: } A \code{numeric} vector. The measurement
+        results from IVD-MD \code{MP_A} (response).
+  \item \code{MP_B: } A \code{numeric} vector. The measurement
+        results from IVD-MD \code{MP_B} (predictor).
+  
+}}
+
+\item{silence}{An \code{integer}. Controls verbose. Verbose can be either
+informative or just noise. Keep in mind that printing to
+the console will slow down calcuation drastically.
+\itemize{
+   \item \code{1: } All progress reports are silenced. This is the default.
+   \item \code{0: } Estimation steps and temporary results are printed to the console
+   \item \code{< 0: } Debugging. Expert use only.
 }}
 }
 \value{
-A \code{list} containing the a point estimate of differences in non-selectivity, zeta. The estimated zeta value is a doubleing-point value, meaning that the precision is 1e-6 (six decimals precision).
+A \code{list} of length one. Contains \code{zeta}, which is a
+\code{double}. This is the calculated \eqn{\hat{\zeta}}.
 }
 \description{
-Estimate the magnitude of differences in non-selectivity, zeta. The measure, zeta, is a theoretical measure being the ratio of the pooled prediction error variance of the OLS model and the irreducible variance of the OLS model.
-             This function estimates zeta using a plug-in estimator for it. See references (coming..) for details on the estimator.
+Estimates the magnitude of differences in non-selectivity (DINS) in a
+IVD-MD comparison between \code{MP_A} and \code{MP_B}. The parameter
+\eqn{\zeta} measures DINS and is estimated using \eqn{\hat{\zeta}}. See
+details.
 }
 \details{
-Estimate differences in non-selectivity with zeta
+Differences in non-selectivity (DINS) between in vitro diagnostic medical
+devices (IVD-MDs) may cause problems in e.g., evaluation of commutability
+of external quality assessment materials or certified reference materials. 
+A large value of \eqn{\hat{\zeta}} may indicate an unacceptable magnitude of
+DINS between compared IVD-MDs. The estimator is defined by
 
-Differences in non-selectivity between in vitro diagnostic medical devices may cause problems in e.g., evaluation of commutability of external quality assessment materials or certified reference materials. A large estimate of zeta indicates that we have considerable differences in non-selectivity between compared IVD-MDs.
-         An upper limit of acceptable zeta estimates may for example be determined based on an particular allowable average relative increase in prediction interval widths due to differences in non-selectivity. Recommendations for choosing allowable average relative increase in prediction interval widths may be found elsewhere.
+\eqn{\hat{\zeta} = \frac{S^2 \cdot (nR + 2) / nR}
+{\hat{\sigma}_v^2 + b_1^2 \cdot \hat{\sigma}_h^2}},
+
+where:
+\itemize{
+  \item \eqn{S^2}: The estimated residual variance of the regression model
+  \item \eqn{b_1^2}: The square of the slope estimator of the regression
+        model.
+  \item \eqn{\hat{\sigma}_v^2}: The estimated pooled repeatability variance
+        of \code{MP_A}.
+  \item \eqn{\hat{\sigma}_h^2}: The estimated pooled repeatability variance
+        of \code{MP_B}.
+  \item \eqn{n}: The number of unique clinical samples in \code{data}
+  \item \eqn{R}: A suitable statistic (e.g., mean) of the number of
+        replicated measurements performed on each clinical sample in
+        \code{data}.
+}
+
+See references for finer details. This estimator of \eqn{\zeta} utilizes
+the ordinary least squares regression model. Thus, it is sensitive to
+non-linearity, which may or may not be due to systematic differences in
+non-selectivity.
+
+To mitigate model endogeneity effects from measurement error in the
+predictor, the roles of \code{MP_A} and \code{MP_B} shifts if
+
+\eqn{\lambda = \hat{\sigma}_v^2 / \hat{\sigma}_h^2 < 0.5}.
+
+Be careful using this estimator of \eqn{\zeta} if both
+\eqn{\hat{\sigma}_v^2} and \eqn{\hat{\sigma}_h^2} are large and the domain of
+the measurement results is very narrow.
+
+Note: If the relationship between \code{MP_A} and \code{MP_B} is
+non-linear, it is advisable to use \code{estimate_zeta_ss()} from the
+\code{smooth.commutable} package instead.
 }
 \examples{
+# Required packages
+library(fasteqa)
 
-# Estimate zeta for a particular dataset
+# Estimate zeta based on the raw data
 zeta <- estimate_zeta_ols(test_data)$zeta
+
+# The output
 print(round(zeta, 2L))
 
-# Estimate zeta based on log-transformed data
+# Log-transformed data
 log_test_data <- test_data
 log_test_data$MP_A <- log(log_test_data$MP_A)
 log_test_data$MP_B <- log(log_test_data$MP_B)
+
+# Estimate zeta based on the log-transformed data
 zeta_log <- estimate_zeta_ols(log_test_data)$zeta
+
+# The output
 print(round(zeta_log, 2L))
 
+}
+\references{
+Fauskanger P.K., et al. (2025) Quantification of Difference in
+Nonselectivity Between In Vitro Diagnostic Medical Devices.
+\emph{Biometrical Journal}. 67: e70032.
+\url{https://doi.org/10.1002/bimj.70032}
 }

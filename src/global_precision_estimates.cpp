@@ -191,6 +191,9 @@ List global_precision_estimates(List data) {
   
   var_MP_A = effective_n_A > 0 ? var_MP_A / effective_n_A : NA_REAL;
   var_MP_B = effective_n_B > 0 ? var_MP_B / effective_n_B : NA_REAL;
+  var_MP_A = var_MP_A > 0 ? var_MP_A : NA_REAL;
+  var_MP_B = var_MP_B > 0 ? var_MP_B : NA_REAL;
+  
   
   // Calculate means
   double mean_MP_A = 0, mean_MP_B = 0;
