@@ -172,3 +172,75 @@ double kurtosis(NumericVector x, bool na_rm = true) {
  
  return kurt;
 }
+
+//' @title Fit a Ordinary Least Squares Model
+//' @name ols_regression
+//'
+//' @param data A \code{list} or \code{data.table}. Must contain:
+//'             \itemize{
+//'                 \item \code{MP_A: } A \code{numeric} vector. The means of
+//'                 replicated measurements from IVD-MD \code{MP_A} (response).
+//'                 \item \code{MP_B: } A \code{numeric} vector. The means of
+//'                 replicated measurements from IVD-MD \code{MP_B} (predictor).
+//'             }
+//'        
+//' @description
+//' Fits a Ordinary Least Squares (OLS) regression model to \code{data}. 
+//' 
+//' @details
+//' No details are needed. It is OLS.
+//'
+//' @return A \code{list}. Contains information on the fitted model.
+//'
+//' @examples
+//' # Reproducibility
+//' set.seed(99)
+//' 
+//' print(rbinom(1, 5, 0.5))
+//' 
+// [[Rcpp::export]]
+List ols_regression(List data) {
+  
+  // Extract traning data
+  NumericVector x = data["MP_B"];
+  NumericVector y = data["MP_A"];
+  
+  // Calculate length of traning data
+  int n = x.length();
+  
+  // Converting integer types to double types when needed in division!
+  double n_double = static_cast<double>(n);
+  
+  // Standard Statistics
+  double sxx = var(x) * (n_double - 1);
+  double mx = mean(x);
+  double my = mean(y);
+  double sxy = 0;
+  double mse = 0;
+  for(int i = 0; i < n; ++i){
+    sxy = sxy + (x[i] - mx) * (y[i] - my);
+  }
+  
+  double b1 = sxy / sxx;
+  double b0 = my - b1 * mx;
+  
+  NumericVector residuals(n);
+  NumericVector fitted(n);
+  
+  for (int i = 0; i < n; ++i) {
+    fitted[i] = b0 + b1 * x[i];
+    residuals[i] = y[i] - fitted[i];
+    mse += pow(residuals[i], 2.0) / (n_double - 2.0);
+  }
+  
+  
+  List output = List::create(Named("b0") = b0,
+                             Named("b1") = b1,
+                             Named("fitted") = fitted,
+                             Named("residuals") = residuals,
+                             Named("mse") = mse);
+  
+  return output;
+  
+}
+

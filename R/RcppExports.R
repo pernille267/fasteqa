@@ -495,6 +495,35 @@ kurtosis <- function(x, na_rm = TRUE) {
     .Call(`_fasteqa_kurtosis`, x, na_rm)
 }
 
+#' @title Fit a Ordinary Least Squares Model
+#' @name ols_regression
+#'
+#' @param data A \code{list} or \code{data.table}. Must contain:
+#'             \itemize{
+#'                 \item \code{MP_A: } A \code{numeric} vector. The means of
+#'                 replicated measurements from IVD-MD \code{MP_A} (response).
+#'                 \item \code{MP_B: } A \code{numeric} vector. The means of
+#'                 replicated measurements from IVD-MD \code{MP_B} (predictor).
+#'             }
+#'        
+#' @description
+#' Fits a Ordinary Least Squares (OLS) regression model to \code{data}. 
+#' 
+#' @details
+#' No details are needed. It is OLS.
+#'
+#' @return A \code{list}. Contains information on the fitted model.
+#'
+#' @examples
+#' # Reproducibility
+#' set.seed(99)
+#' 
+#' print(rbinom(1, 5, 0.5))
+#' 
+ols_regression <- function(data) {
+    .Call(`_fasteqa_ols_regression`, data)
+}
+
 #' @title Quantify Differences in Non-selectivity Using \eqn{\hat{\zeta}}
 #' @name estimate_zeta_ols
 #' @param data A \code{list} or \code{data.table}. Must contain:

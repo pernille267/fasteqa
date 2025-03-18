@@ -144,6 +144,17 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// ols_regression
+List ols_regression(List data);
+RcppExport SEXP _fasteqa_ols_regression(SEXP dataSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< List >::type data(dataSEXP);
+    rcpp_result_gen = Rcpp::wrap(ols_regression(data));
+    return rcpp_result_gen;
+END_RCPP
+}
 // estimate_zeta_ols
 List estimate_zeta_ols(List data, int silence);
 RcppExport SEXP _fasteqa_estimate_zeta_ols(SEXP dataSEXP, SEXP silenceSEXP) {
@@ -282,6 +293,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_fasteqa_count_samplewise_replicates", (DL_FUNC) &_fasteqa_count_samplewise_replicates, 4},
     {"_fasteqa_skewness", (DL_FUNC) &_fasteqa_skewness, 2},
     {"_fasteqa_kurtosis", (DL_FUNC) &_fasteqa_kurtosis, 2},
+    {"_fasteqa_ols_regression", (DL_FUNC) &_fasteqa_ols_regression, 1},
     {"_fasteqa_estimate_zeta_ols", (DL_FUNC) &_fasteqa_estimate_zeta_ols, 2},
     {"_fasteqa_estimate_zeta_deming", (DL_FUNC) &_fasteqa_estimate_zeta_deming, 2},
     {"_fasteqa_fun_of_replicates", (DL_FUNC) &_fasteqa_fun_of_replicates, 2},
