@@ -244,3 +244,218 @@ List ols_regression(List data) {
   
 }
 
+//' @title Perform a Breusch-Pagan Test
+//' @name pb_test
+//'
+//' @param data A \code{list} or \code{data.table}. Must contain:
+//'             \itemize{
+//'                 \item \code{MP_A: } A \code{numeric} vector. The means of
+//'                 replicated measurements from IVD-MD \code{MP_A} (response).
+//'                 \item \code{MP_B: } A \code{numeric} vector. The means of
+//'                 replicated measurements from IVD-MD \code{MP_B} (predictor).
+//'             }
+//' @param koenker A \code{logical} value. If \code{TRUE} (default), the Koenker
+//'                modification is applied to the make the test more robust
+//'                when data is non-normal.
+//'        
+//' @description
+//' Performs a Breusch Pagan test on variance heterogeneity on \code{data}. 
+//' 
+//' @details
+//' The Breusch-Pagan test and its Koenker modification are both used to detect
+//' heteroskedasticity in linear regression models.
+//' 
+//' The Koenker version, proposed by Koenker in 1981, modifies the test to make
+//' it more robust when the data is non-normal. Note however, that the Koenker
+//' version will have poorer power than the unmodified Breusch-Pagan test if
+//' the data is close to normal.
+//' 
+//' Note: \code{NA}-values are silently removed prior to calculating the 
+//' Breusch-Pagan test statistic.
+//'
+//' @return A \code{double}. The calculated p-value of the test.
+//'
+//' @examples
+//' 
+//' # Required packages
+//' library(fasteqa)
+//' 
+//' # Reproducibility
+//' set.seed(99)
+//' 
+//' # Simulate some example data
+//' x <- runif(n = 50, min = 0, max = 1)
+//' y <- 0.1 + 0.9 * x + rnorm(n = 50, mean = 0, sd = 0.05 * (x + 1))
+//' data <- list(MP_A = y,
+//'              MP_B = x)
+//' 
+//' # The output (rounded to 3L)
+//' print(round(bp_test(data), 3L))
+//' 
+//' 
+// [[Rcpp::export]]
+double bp_test(List data, bool koenker = true) {
+ 
+ // Check if data contains required vectors
+ if (!data.containsElementNamed("MP_B") || !data.containsElementNamed("MP_A")) {
+   stop("Data must contain both 'MP_A' and 'MP_B' vectors");
+ }
+ 
+ // Extract predictor values data
+ NumericVector x = data["MP_B"];
+ NumericVector y = data["MP_A"];
+ 
+ // Check for empty vectors
+ if (x.size() == 0 || y.size() == 0) {
+   stop("Input vectors cannot be empty");
+ }
+ 
+ // Check for size mismatch
+ if (x.size() != y.size()) {
+   stop("MP_A and MP_B must have the same length");
+ }
+ 
+ // Get number of pairs
+ int n = x.size();
+ 
+ // Check for NA values
+ bool has_na = false;
+ for (int i = 0; i < n; ++i) {
+   if (ISNAN(x[i]) || ISNAN(y[i])) {
+     has_na = true;
+     break;
+   }
+ }
+ 
+ // Handle NA values if present
+ if (has_na) {
+   
+   // Create vectors without NA values
+   NumericVector x_clean, y_clean;
+   for (int i = 0; i < n; ++i) {
+     if (!NumericVector::is_na(x[i]) && !NumericVector::is_na(y[i])) {
+       x_clean.push_back(x[i]);
+       y_clean.push_back(y[i]);
+     }
+   }
+   
+   // Check if we have enough data after removing NAs
+   if (x_clean.size() < 5) {
+     stop("Not enough non-NA observations to perform the test");
+   }
+   
+   // Create new data list with clean values
+   List clean_data = List::create(
+     Named("MP_A") = y_clean,
+     Named("MP_B") = x_clean
+   );
+   
+   // Get original OLS fit with clean data
+   List ols_fit = ols_regression(clean_data);
+   
+   // Update n to the new size
+   n = x_clean.size();
+   
+   // Extract residuals
+   NumericVector residuals = ols_fit["residuals"];
+  
+  // Empty vectors
+  NumericVector sq_residuals(n); // Sqaured residuals from orig OLS model
+  NumericVector w_hat(n); // Modified residuals used in fitting aux. OLS model (response)
+  
+  // Get relevant measures
+  double mle_mse = 0.0;
+  double koenker_mse = 0.0;
+  double denominator = 0.0;
+  double numerator = 0.0;
+  
+  for (int i = 0; i < n; ++i) {
+    sq_residuals[i] = pow(residuals[i], 2.0);
+    mle_mse += sq_residuals[i] / (n + 0.0);
+  }
+  
+  for (int i = 0; i < n; ++i) {
+    w_hat[i] = sq_residuals[i] - mle_mse;
+    koenker_mse += pow(sq_residuals[i] - mle_mse, 2.0) / (n + 0.0);
+  }
+  
+  if (koenker) {
+    denominator += koenker_mse;
+  }
+  
+  else {
+    denominator += 2.0 * pow(mle_mse, 2.0);
+  }
+  
+  // Fit aux model
+  List model_frame = List::create(Named("MP_A") = w_hat,
+                                  Named("MP_B") = x_clean);
+  List aux_ols_fit = ols_regression(model_frame);
+  
+  NumericVector w_hat_hat = aux_ols_fit["fitted"]; // Fitted aux. OLS model values
+  
+  for (int i = 0; i < n; ++i) {
+    numerator += pow(w_hat_hat[i], 2.0);
+  }
+  
+  double bp_test_stat = numerator / denominator;
+  double pval = R::pchisq(bp_test_stat, 1.0, 0, 0);
+  
+  return pval;
+  
+  
+ }
+ 
+ // Get original OLS fit with data
+ List ols_fit = ols_regression(data);
+   
+ // Extract residuals
+ NumericVector residuals = ols_fit["residuals"];
+ 
+ // Empty vectors
+ NumericVector sq_residuals(n); // Sqaured residuals from orig OLS model
+ NumericVector w_hat(n); // Modified residuals used in fitting aux. OLS model (response)
+ 
+ // Get relevant measures
+ double mle_mse = 0.0;
+ double koenker_mse = 0.0;
+ double denominator = 0.0;
+ double numerator = 0.0;
+ 
+ for (int i = 0; i < n; ++i) {
+   sq_residuals[i] = pow(residuals[i], 2.0);
+   mle_mse += sq_residuals[i] / (n + 0.0);
+ }
+ 
+ for (int i = 0; i < n; ++i) {
+   w_hat[i] = sq_residuals[i] - mle_mse;
+   koenker_mse += pow(sq_residuals[i] - mle_mse, 2.0) / (n + 0.0);
+ }
+ 
+ if (koenker) {
+   denominator += koenker_mse;
+ }
+ 
+ else {
+   denominator += 2.0 * pow(mle_mse, 2.0);
+ }
+ 
+ // Fit aux model
+ List model_frame = List::create(Named("MP_A") = w_hat,
+                                 Named("MP_B") = x);
+ List aux_ols_fit = ols_regression(model_frame);
+ 
+ NumericVector w_hat_hat = aux_ols_fit["fitted"]; // Fitted aux. OLS model values
+ 
+ for (int i = 0; i < n; ++i) {
+   numerator += pow(w_hat_hat[i], 2.0);
+ }
+ 
+ double bp_test_stat = numerator / denominator;
+ double pval = R::pchisq(bp_test_stat, 1.0, 0, 0);
+ 
+ return pval;
+ 
+}
+
+

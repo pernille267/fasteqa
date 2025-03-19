@@ -524,6 +524,59 @@ ols_regression <- function(data) {
     .Call(`_fasteqa_ols_regression`, data)
 }
 
+#' @title Perform a Breusch-Pagan Test
+#' @name pb_test
+#'
+#' @param data A \code{list} or \code{data.table}. Must contain:
+#'             \itemize{
+#'                 \item \code{MP_A: } A \code{numeric} vector. The means of
+#'                 replicated measurements from IVD-MD \code{MP_A} (response).
+#'                 \item \code{MP_B: } A \code{numeric} vector. The means of
+#'                 replicated measurements from IVD-MD \code{MP_B} (predictor).
+#'             }
+#' @param koenker A \code{logical} value. If \code{TRUE} (default), the Koenker
+#'                modification is applied to the make the test more robust
+#'                when data is non-normal.
+#'        
+#' @description
+#' Performs a Breusch Pagan test on variance heterogeneity on \code{data}. 
+#' 
+#' @details
+#' The Breusch-Pagan test and its Koenker modification are both used to detect
+#' heteroskedasticity in linear regression models.
+#' 
+#' The Koenker version, proposed by Koenker in 1981, modifies the test to make
+#' it more robust when the data is non-normal. Note however, that the Koenker
+#' version will have poorer power than the unmodified Breusch-Pagan test if
+#' the data is close to normal.
+#' 
+#' Note: \code{NA}-values are silently removed prior to calculating the 
+#' Breusch-Pagan test statistic.
+#'
+#' @return A \code{double}. The calculated p-value of the test.
+#'
+#' @examples
+#' 
+#' # Required packages
+#' library(fasteqa)
+#' 
+#' # Reproducibility
+#' set.seed(99)
+#' 
+#' # Simulate some example data
+#' x <- runif(n = 50, min = 0, max = 1)
+#' y <- 0.1 + 0.9 * x + rnorm(n = 50, mean = 0, sd = 0.05 * (x + 1))
+#' data <- list(MP_A = y,
+#'              MP_B = x)
+#' 
+#' # The output (rounded to 3L)
+#' print(round(bp_test(data), 3L))
+#' 
+#' 
+bp_test <- function(data, koenker = TRUE) {
+    .Call(`_fasteqa_bp_test`, data, koenker)
+}
+
 #' @title Quantify Differences in Non-selectivity Using \eqn{\hat{\zeta}}
 #' @name estimate_zeta_ols
 #' @param data A \code{list} or \code{data.table}. Must contain:
