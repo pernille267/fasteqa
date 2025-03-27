@@ -112,10 +112,10 @@ List fun_of_replicates(List data, std::string fun = "mean") {
     if (groupedDataA.find(id) == groupedDataA.end()) {
       uniqueIDsOrdered.push_back(id);
     }
-    if (!NumericVector::is_na(MP_A[i])) {
+    if (!ISNAN(MP_A[i])) {
       groupedDataA[id].push_back(MP_A[i]);
     }
-    if (!NumericVector::is_na(MP_B[i])) {
+    if (!ISNAN(MP_B[i])) {
       groupedDataB[id].push_back(MP_B[i]);
     }
   }

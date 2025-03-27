@@ -1,5 +1,3 @@
-library(fasteqa)
-
 # Required functions
 cv <- function(x, na.rm = FALSE){
   return(sd(x, na.rm = na.rm) / mean(x, na.rm = na.rm))
@@ -9,7 +7,10 @@ test_that(desc = "Check if function gives the expected results", code = {
   
   # Set seed for reproducibility
   set.seed(99)
-  test_data <- simulate_eqa_data(list(n = 10, R = 5, cvx = 0.01, cvy = 0.01, cil = 2, ciu = 10))
+  test_data <- sim_eqa_data(parameters = list(n = 10, R = 5, cvx = 0.01, cvy = 0.01, cil = 2, ciu = 10),
+                            type = 0L,
+                            AR = TRUE,
+                            include_parameters = FALSE)
   test_data$MP_B[c(1:5, 45:49)] <- NA_real_
   
   true_mean_of_replicates_B <- unname(tapply(test_data$MP_B,
