@@ -1,11 +1,18 @@
 #include <Rcpp.h>
-#include <unordered_set>
+#include <vector>        // Use std::vector for temporary storage
+#include <numeric>       // For std::accumulate
+#include <cmath>         // For std::sqrt, std::pow, ISNAN
+#include <unordered_map> // For efficient grouping
+#include <limits>        // For infinity or quiet NaN if needed
 using namespace Rcpp;
 
 // (*) Helper function for estimating variance
 double estimate_variance(const std::vector<double>& values) {
-  double sum = 0.0, sq_sum = 0.0;
   const int n = values.size();
+  if (n < 2) {
+    return NA_REAL;
+  }
+  double sum = 0.0, sq_sum = 0.0;
   
   for (double value : values) {
     sum += value;
@@ -135,261 +142,228 @@ List global_precision_estimates_local(List data) {
   );
 }
 
+// Helper to calculate sum and count for mean
+struct SumCount {
+  double sum = 0.0;
+  int count = 0;
+};
+
 // (****) Helper function for obtaining estimated zeta values
 double estimate_zeta_local(List data) {
+  
+  // --- 1. Data Extraction and Preparation ---
   CharacterVector SampleID = data["SampleID"];
-  CharacterVector ReplicateID = data["ReplicateID"];
   NumericVector MP_A = data["MP_A"];
   NumericVector MP_B = data["MP_B"];
-  CharacterVector summary_SampleID = unique(SampleID);
-  int n = summary_SampleID.size();
-  int N = SampleID.size();
-  NumericVector ith_var_MP_A(n);
-  NumericVector ith_var_MP_B(n);
-  int replicate_number_requirement = 2;
-  int c = 0;
-  for(int i = 0; i < n; ++i){
-    CharacterVector ith_sample(1);
-    ith_sample[0] = summary_SampleID[i];
-    LogicalVector matches = in(SampleID, ith_sample);
-    int number_of_matches = sum(matches);
-    NumericVector indices(number_of_matches);
-    int k = 0;
-    for(int j = 0; j < N; ++j){
-      if(matches[j] == 1){
-        indices[k] = j;
-        ++k;
-      }
-    }
-    NumericVector ith_sample_measurements_A(number_of_matches);
-    NumericVector ith_sample_measurements_B(number_of_matches);
-    for(int k = 0; k < number_of_matches; ++k){
-      bool is_na_A = ISNAN(MP_A[indices[k]]);
-      bool is_na_B = ISNAN(MP_B[indices[k]]);
-      if(!is_na_A){
-        ith_sample_measurements_A[k] = MP_A[indices[k]];
-      }
-      else{
-        ith_sample_measurements_A[k] = -100.0;
-      }
-      if(!is_na_B){
-        ith_sample_measurements_B[k] = MP_B[indices[k]];  
-      }
-      else{
-        ith_sample_measurements_B[k] = -100.0;
-      }
-    }
-    IntegerVector NA_search_A(number_of_matches);
-    IntegerVector NA_search_B(number_of_matches);
-    for(int k = 0; k < number_of_matches; ++k){
-      if(ith_sample_measurements_A[k] == -100.0){
-        NA_search_A[k] = 0;
-      }
-      if(ith_sample_measurements_A[k] > -100.0){
-        NA_search_A[k] = 1;
-      }
-      if(ith_sample_measurements_B[k] == -100.0){
-        NA_search_B[k] = 0;
-      }
-      if(ith_sample_measurements_B[k] > -100.0){
-        NA_search_B[k] = 1;
-      }
-      if((ith_sample_measurements_A[k] < -100.0) | (ith_sample_measurements_B[k] < -100.0)){
-        stop("Unrealistic measurements are recorded!");
-      }
-    }
-    ith_sample_measurements_A = ith_sample_measurements_A.sort();
-    ith_sample_measurements_B = ith_sample_measurements_B.sort();
-    NA_search_A = NA_search_A.sort();
-    NA_search_B = NA_search_B.sort();
-    for(int k = 0; k < number_of_matches; ++k){
-      if(NA_search_A[k] == 0){
-        ith_sample_measurements_A.erase(0); 
-      }
-    }
-    for(int k = 0; k < number_of_matches; ++k){
-      if(NA_search_B[k] == 0){
-        ith_sample_measurements_B.erase(0);
-      }
-    }
-    if(ith_sample_measurements_A.size() >= replicate_number_requirement){
-      ith_var_MP_A[c] = var(ith_sample_measurements_A);
-    }
-    else if(ith_sample_measurements_A.size() < replicate_number_requirement){
-      ith_var_MP_A[c] = NA_REAL;  
-    }
-    if(ith_sample_measurements_B.size() >= replicate_number_requirement){
-      ith_var_MP_B[c] = var(ith_sample_measurements_B);  
-    }
-    else if(ith_sample_measurements_B.size() < replicate_number_requirement){
-      ith_var_MP_B[c] = NA_REAL;
-    }
-    ++c;
+  const int N = SampleID.size(); // Total number of rows
+  
+  // Basic input checks
+  if (N == 0) {
+    Rcpp::warning("Input data has zero rows.");
+    return NA_REAL;
   }
-  int effective_N_A = N;
-  int effective_n_A = n;
-  int effective_N_B = N;
-  int effective_n_B = n;
-  double var_MP_A = 0;
-  double var_MP_B = 0;
-  for(int j = 0; j < n; ++j){
-    bool is_na_var_A = ISNAN(ith_var_MP_A[j]);
-    bool is_na_var_B = ISNAN(ith_var_MP_B[j]);
-    if(!is_na_var_A){
-      var_MP_A += ith_var_MP_A[j];
+  if (MP_A.size() != N || MP_B.size() != N) {
+    stop("Input vectors (SampleID, MP_A, MP_B) must have the same length.");
+  }
+  
+  // Build index map for efficient grouping by SampleID
+  std::unordered_map<String, std::vector<int>> sample_indices;
+  for (int i = 0; i < N; ++i) {
+    sample_indices[String(SampleID[i])].push_back(i);
+  }
+  int n = sample_indices.size(); // Number of unique samples
+  
+  // --- 2. Calculate Sample Variances (Robustly) ---
+  std::vector<double> sample_vars_A; // Store only valid variances
+  std::vector<double> sample_vars_B;
+  sample_vars_A.reserve(n); // Pre-allocate potential space
+  sample_vars_B.reserve(n);
+  const int replicate_number_requirement = 2;
+  
+  for (auto const& [sample_str, indices] : sample_indices) {
+    std::vector<double> valid_measurements_A;
+    std::vector<double> valid_measurements_B;
+    valid_measurements_A.reserve(indices.size());
+    valid_measurements_B.reserve(indices.size());
+    
+    // Collect valid (non-NA) measurements for this sample
+    for (int idx : indices) {
+      if (!ISNAN(MP_A[idx])) {
+        valid_measurements_A.push_back(MP_A[idx]);
+      }
+      if (!ISNAN(MP_B[idx])) {
+        valid_measurements_B.push_back(MP_B[idx]);
+      }
     }
-    else if(is_na_var_A){
-      effective_n_A = effective_n_A - 1;
+    
+    // Calculate variance if enough valid replicates exist
+    if (valid_measurements_A.size() >= replicate_number_requirement) {
+      sample_vars_A.push_back(estimate_variance(valid_measurements_A));
     }
-    if(!is_na_var_B){
-      var_MP_B += ith_var_MP_B[j];
-    }
-    else if(is_na_var_B){
-      effective_n_B = effective_n_B - 1;
+    if (valid_measurements_B.size() >= replicate_number_requirement) {
+      sample_vars_B.push_back(estimate_variance(valid_measurements_B));
     }
   }
-  if(effective_n_A >= 1){
-    var_MP_A = var_MP_A / effective_n_A; 
-  }
-  else if(effective_n_A < 1){
-    var_MP_A = NA_REAL;
-  }
-  if(effective_n_B >= 1){
-    var_MP_B = var_MP_B / effective_n_B;
-  }
-  else if(effective_n_B < 1){
-    var_MP_B = NA_REAL;
-  }
-  double lambda = 0;
-  bool is_na_pooled_var_MP_A = ISNAN(var_MP_A);
-  bool is_na_pooled_var_MP_B = ISNAN(var_MP_B);
-  bool can_calculate_zeta = (!is_na_pooled_var_MP_A) & (!is_na_pooled_var_MP_B);
-  if(can_calculate_zeta){
-    if(var_MP_B < 0.0000001){
-      var_MP_B = 0.0000001;
-      Rcpp::warning("The estimate of Var_MP_B may be unrealistically small! You may not be able to trust the estimated zeta value!");
+  
+  // --- 3. Pool Variances & Calculate Lambda ---
+  double var_MP_A = NA_REAL;
+  double var_MP_B = NA_REAL;
+  int effective_n_A = sample_vars_A.size();
+  int effective_n_B = sample_vars_B.size();
+  
+  if (effective_n_A > 0) {
+    // Remove potential NAs returned by estimate_variance if n<2 (if applicable)
+    sample_vars_A.erase(std::remove_if(sample_vars_A.begin(), sample_vars_A.end(),
+                                       [](double v){ return ISNAN(v); }),
+                                       sample_vars_A.end());
+    effective_n_A = sample_vars_A.size(); // Update count after potential removal
+    if (effective_n_A > 0) {
+      var_MP_A = std::accumulate(sample_vars_A.begin(), sample_vars_A.end(), 0.0) / effective_n_A;
     }
-    if(var_MP_A < 0){
-      Rcpp::warning("The estimate of Var_MP_A was negative... ");
-      return NA_REAL;
-    }
-    lambda = var_MP_A / var_MP_B;  
   }
-  else{
+  if (effective_n_B > 0) {
+    sample_vars_B.erase(std::remove_if(sample_vars_B.begin(), sample_vars_B.end(),
+                                       [](double v){ return ISNAN(v); }),
+                                       sample_vars_B.end());
+    effective_n_B = sample_vars_B.size();
+    if (effective_n_B > 0) {
+      var_MP_B = std::accumulate(sample_vars_B.begin(), sample_vars_B.end(), 0.0) / effective_n_B;
+    }
+  }
+  
+  if (ISNAN(var_MP_A) || ISNAN(var_MP_B)) {
+    Rcpp::warning("Could not estimate pooled variance for MP_A and/or MP_B (insufficient replicates or all NA).");
     return NA_REAL;
   }
   
-  double mean_MP_A = 0.0;
-  double mean_MP_B = 0.0;
-  
-  for(int i = 0; i < N; ++i){
-    bool is_na_mean_A = ISNAN(MP_A[i]);
-    bool is_na_mean_B = ISNAN(MP_B[i]);
-    if((!is_na_mean_A) & (!is_na_mean_B)){
-      mean_MP_A += MP_A[i];
-      mean_MP_B += MP_B[i];
+  // Handle near-zero variance for B
+  const double tolerance = 1e-9; // Use a small tolerance
+  if (std::abs(var_MP_B) < tolerance) {
+    if (var_MP_B == 0 && var_MP_A == 0) {
+      // Special case: If both are zero, lambda is undefined but maybe treat as 1? Or NA?
+      // Current code implies lambda -> Inf or 0. Let's return NA as safest.
+      Rcpp::warning("Estimated variance for MP_B is zero (or near zero). Cannot calculate lambda reliably.");
+      return NA_REAL;
     }
-    else{
-      effective_N_A = effective_N_A - 1;
-      effective_N_B = effective_N_B - 1;
+    if (var_MP_B == 0 && var_MP_A != 0) {
+      Rcpp::warning("Estimated variance for MP_B is zero, but MP_A variance is non-zero. Lambda -> Inf.");
+      // Depending on context, maybe return Inf or NA? Returning NA is safer.
+      return NA_REAL;
     }
+    // If var_MP_B is just very small but non-zero:
+    Rcpp::warning("The estimate of Var_MP_B is very small. Consider results carefully.");
+    // Proceed with calculation, lambda might be huge. Original code replaced with 0.0000001, let's avoid modification.
   }
-  if(effective_N_A >= 1){
-    mean_MP_A = mean_MP_A / effective_N_A;  
-  }
-  if(effective_N_A < 1){
-    mean_MP_A = NA_REAL;
-  }
-  if(effective_N_B >= 1){
-    mean_MP_B = mean_MP_B / effective_N_B;
-  }
-  if(effective_N_B < 1){
-    mean_MP_B = NA_REAL;  
-  }
-  if(lambda < 0.5){
-    
-    NumericVector x = MP_A;
-    NumericVector y = MP_B;
-    
-    double mx = mean_MP_A;
-    double my = mean_MP_B;
-    
-    double sxx = 0;
-    double sxy = 0;
-    double sse = 0;
-    for(int i = 0; i < N; ++i){
-      bool na_check_x = ISNAN(x[i]);
-      bool na_check_y = ISNAN(y[i]);
-      if((!na_check_x) & (!na_check_y)){
-        sxx = sxx + pow(x[i] - mx, 2);
-        sxy = sxy + (x[i] - mx) * (y[i] - my);  
-      }
-    }
-    double b1 = sxy / sxx;
-    double b0 = my - b1 * mx;
-    
-    int effective_N = N;
-    for(int i = 0; i < N; ++i){
-      bool na_check_x = ISNAN(x[i]);
-      bool na_check_y = ISNAN(y[i]);
-      if((!na_check_x) & (!na_check_y)){
-        double yhat = b0 + b1 * x[i];  
-        sse = sse + pow(y[i] - yhat, 2);
-      }
-      else{
-        effective_N = effective_N - 1;
-        continue;
-      }
-    }
-    double mse = sse / (effective_N - 2);
-    double varpar = mse * (effective_N + 2);
-    varpar = varpar / effective_N;
-    double zeta = varpar / (var_MP_A * pow(b1, 2) + var_MP_B);
-    return zeta;
+  if (var_MP_A < 0 || var_MP_B < 0) {
+    // This shouldn't happen with correct variance calculation but good check
+    Rcpp::warning("Estimated variance negative (%f, %f), check variance calculation.", var_MP_A, var_MP_B);
+    return NA_REAL;
   }
   
-  else if(lambda >= 0.5){
-    
-    NumericVector x = MP_B;
-    NumericVector y = MP_A;
-    
-    double mx = mean_MP_B;
-    double my = mean_MP_A;
-    
-    double sxx = 0;
-    double sxy = 0;
-    double sse = 0;
-    for(int i = 0; i < N; ++i){
-      bool na_check_x = ISNAN(x[i]);
-      bool na_check_y = ISNAN(y[i]);
-      if((!na_check_x) & (!na_check_y)){
-        sxx = sxx + pow(x[i] - mx, 2);
-        sxy = sxy + (x[i] - mx) * (y[i] - my);  
-      }
-    }
-    double b1 = sxy / sxx;
-    double b0 = my - b1 * mx;
-    
-    int effective_N = N;
-    for(int i = 0; i < N; ++i){
-      bool na_check_x = ISNAN(x[i]);
-      bool na_check_y = ISNAN(y[i]);
-      if((!na_check_x) & (!na_check_y)){
-        double yhat = b0 + b1 * x[i];  
-        sse = sse + pow(y[i] - yhat, 2);
-      }
-      else{
-        effective_N = effective_N - 1;
-        continue;
-      }
-    }
-    double mse = sse / (effective_N - 2);
-    double varpar = mse * (effective_N + 2);
-    varpar = varpar / effective_N;
-    double zeta = varpar / (var_MP_B * pow(b1, 2) + var_MP_A);
-    return zeta;
+  // Check for division by zero before calculating lambda
+  if (var_MP_B == 0.0) {
+    Rcpp::warning("Division by zero: var_MP_B is exactly zero.");
+    return NA_REAL;
   }
-  return NA_REAL;
+  double lambda = var_MP_A / var_MP_B;
+  
+  
+  // --- 4. Calculate Overall Means and Prepare for Regression ---
+  std::vector<double> x_clean, y_clean;
+  x_clean.reserve(N);
+  y_clean.reserve(N);
+  SumCount mean_calc_A = {0.0, 0};
+  SumCount mean_calc_B = {0.0, 0};
+  
+  bool swap_xy = (lambda >= 0.5); // Determine which variable is X
+  
+  for (int i = 0; i < N; ++i) {
+    bool na_A = ISNAN(MP_A[i]);
+    bool na_B = ISNAN(MP_B[i]);
+    
+    // Only consider pairs where *both* are non-NA for regression
+    if (!na_A && !na_B) {
+      if (swap_xy) { // B is X, A is Y
+        x_clean.push_back(MP_B[i]);
+        y_clean.push_back(MP_A[i]);
+        mean_calc_B.sum += MP_B[i]; mean_calc_B.count++;
+        mean_calc_A.sum += MP_A[i]; mean_calc_A.count++; // Still need overall mean of A
+      } else { // A is X, B is Y
+        x_clean.push_back(MP_A[i]);
+        y_clean.push_back(MP_B[i]);
+        mean_calc_A.sum += MP_A[i]; mean_calc_A.count++;
+        mean_calc_B.sum += MP_B[i]; mean_calc_B.count++; // Still need overall mean of B
+      }
+    }
+    // Accumulate for overall means even if one is NA (matches original logic, but could be debated)
+    // Update: Sticking to only non-NA pairs for means used in regression for consistency.
+    // If truly *overall* means were needed including single NAs, calculate separately.
+    // The original code accumulated means *only* when both were non-NA in the lambda>=0.5 branch,
+    // but seemed to accumulate overall means before that. Let's be consistent and use
+    // means *of the data used in the regression*.
+  }
+  
+  int effective_N_reg = x_clean.size(); // Number of valid pairs for regression
+  
+  if (effective_N_reg < 3) { // Need at least 3 points for OLS (2 for slope, 1 for error df)
+    Rcpp::warning("Insufficient valid data pairs (< 3) for regression.");
+    return NA_REAL;
+  }
+  
+  // Calculate means of the data used for regression
+  double mx = (mean_calc_B.count > 0) ? mean_calc_B.sum / mean_calc_B.count : NA_REAL; // Mean of X (if B is X)
+  double my = (mean_calc_A.count > 0) ? mean_calc_A.sum / mean_calc_A.count : NA_REAL; // Mean of Y (if A is Y)
+  if (!swap_xy) { // If A is X, swap the calculated means
+    std::swap(mx, my);
+  }
+  
+  if (ISNAN(mx) || ISNAN(my)) {
+    Rcpp::warning("Could not calculate means for regression data.");
+    return NA_REAL;
+  }
+  
+  // --- 5. Perform OLS Regression ---
+  double sxx = 0.0, sxy = 0.0, sse = 0.0;
+  for (int i = 0; i < effective_N_reg; ++i) {
+    sxx += std::pow(x_clean[i] - mx, 2);
+    sxy += (x_clean[i] - mx) * (y_clean[i] - my);
+  }
+  
+  if (std::abs(sxx) < tolerance) {
+    Rcpp::warning("Sum of squares for X (sxx) is zero or near zero. Cannot calculate regression slope.");
+    return NA_REAL;
+  }
+  
+  double b1 = sxy / sxx;
+  double b0 = my - b1 * mx;
+  
+  for (int i = 0; i < effective_N_reg; ++i) {
+    double yhat = b0 + b1 * x_clean[i];
+    sse += std::pow(y_clean[i] - yhat, 2);
+  }
+  
+  double mse = sse / (effective_N_reg - 2);
+  
+  // --- 6. Calculate Zeta ---
+  // Original formula: varpar = mse * (effective_N + 2) / effective_N;
+  // This seems unusual. Often mse is used directly or var(residuals). Let's stick to it.
+  double varpar = mse * (static_cast<double>(effective_N_reg) + 2.0) / static_cast<double>(effective_N_reg);
+  
+  double zeta_denominator = 0.0;
+  if (swap_xy) { // B was X, A was Y
+    zeta_denominator = (var_MP_B * std::pow(b1, 2) + var_MP_A);
+  } else { // A was X, B was Y
+    zeta_denominator = (var_MP_A * std::pow(b1, 2) + var_MP_B);
+  }
+  
+  if (std::abs(zeta_denominator) < tolerance) {
+    Rcpp::warning("Denominator for zeta calculation is zero or near zero.");
+    return NA_REAL;
+  }
+  
+  double zeta = varpar / zeta_denominator;
+  
+  return zeta;
 }
 
 //' @title Resample Clustered Data
@@ -842,7 +816,7 @@ NumericVector BCa_bootstrap_ci(NumericVector bootstrapped_parameter_estimates,
      J--;
      continue;
    }
-   jpe.push_front(raw_jpe[i]);
+   jpe.push_back(raw_jpe[i]);
  }
  
  if(silence < 1){

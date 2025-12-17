@@ -292,6 +292,20 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// sim_eqa_data2
+List sim_eqa_data2(Nullable<List> parameters, int type, bool AR, bool include_parameters);
+RcppExport SEXP _fasteqa_sim_eqa_data2(SEXP parametersSEXP, SEXP typeSEXP, SEXP ARSEXP, SEXP include_parametersSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Nullable<List> >::type parameters(parametersSEXP);
+    Rcpp::traits::input_parameter< int >::type type(typeSEXP);
+    Rcpp::traits::input_parameter< bool >::type AR(ARSEXP);
+    Rcpp::traits::input_parameter< bool >::type include_parameters(include_parametersSEXP);
+    rcpp_result_gen = Rcpp::wrap(sim_eqa_data2(parameters, type, AR, include_parameters));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_fasteqa_resample_samples", (DL_FUNC) &_fasteqa_resample_samples, 1},
@@ -316,6 +330,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_fasteqa_residuals_eqa", (DL_FUNC) &_fasteqa_residuals_eqa, 6},
     {"_fasteqa_simulate_eqa_data", (DL_FUNC) &_fasteqa_simulate_eqa_data, 2},
     {"_fasteqa_sim_eqa_data", (DL_FUNC) &_fasteqa_sim_eqa_data, 4},
+    {"_fasteqa_sim_eqa_data2", (DL_FUNC) &_fasteqa_sim_eqa_data2, 4},
     {NULL, NULL, 0}
 };
 

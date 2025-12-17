@@ -60,12 +60,3 @@ test_that(desc = "Test bootstrap confidence intervals of estimated lambda", code
   expect_equal(object = actual_4, expected = expected_4, tolerance = 0.05)
   
 })
-
-
-
-
-
-
-
-
-

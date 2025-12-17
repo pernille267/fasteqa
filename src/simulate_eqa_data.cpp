@@ -1,4 +1,9 @@
 #include <Rcpp.h>
+#include <string>
+#include <vector>
+#include <cmath>
+#include <algorithm> // for std::max
+
 using namespace Rcpp;
 
 //' @title Simulation of External Quality Assessment (EQA) Data (Deprecated)
@@ -1943,5 +1948,585 @@ NumericVector custom_function(NumericVector x, Rcpp::Function func){
    return out;
  }
 
+// Helper function to call a custom R function safely (expects scalar in/out)
+// [[Rcpp::plugins(cpp11)]]
+inline double call_custom_g(double input_val, const Function& func) {
+  NumericVector input_vec = NumericVector::create(input_val);
+  NumericVector output_vec = func(input_vec);
+  if (output_vec.size() != 1) {
+    Rcpp::stop("Custom function 'g' must return a single numeric value for a single numeric input.");
+  }
+  if (NumericVector::is_na(output_vec[0])) {
+    Rcpp::warning("Custom function 'g' returned NA for input %f", input_val);
+    return NA_REAL;
+  }
+  return output_vec[0];
+}
 
+
+//' @title Simulation of External Quality Assessment (EQA) Data
+//' @name sim_eqa_data2
+//'
+//' @param parameters A \code{list} of parameters and their value. These values
+//'        are used to simulate the EQA data. Optional parameters that you may
+//'        include into the list are:
+//' \itemize{
+//'   \item \code{n: } The number of samples. Defaults to 25.
+//'   \item \code{R: } The number of replicates on each sample. Must be >= 1. Defaults to 3.
+//'   \item \code{cvx: } The base repeatability coefficient of variation for IVD-MD
+//'                      \code{MP_B}. Defaults to 0.01.
+//'   \item \code{cvy: } The base repeatability coefficient of variation for IVD-MD
+//'                      \code{MP_A}. Defaults to 0.01.
+//'   \item \code{cil: } The lower bound of the concentration interval. Defaults to 2.0.
+//'   \item \code{ciu: } The upper bound of the concentration interval. Must be > \code{cil}. Defaults to 10.0.
+//'   \item \code{dist: } The distribution to simulate latent variables \eqn{\tau_i} from.
+//'                       Possible choices include
+//'                       \code{"unif"} (uniform distribution, default),
+//'                       \code{"norm"} (normal distribution),
+//'                       \code{"lst"} (location-scale student t-distribution),
+//'                       \code{"lnorm"} (log-normal distribution).
+//'   \item \code{df_tau: } The degrees of freedom for the \code{lst}
+//'                         distribution if \code{dist = "lst"}.
+//'                         Defaults to 5.0 if not otherwise specified. Must be > 0.
+//'   \item \code{eta: } The heteroscedasticity factor \eqn{\eta}. Controls how strongly SD depends on concentration. See Details. Defaults to 0.
+//'   \item \code{eta0: } The base heteroscedasticity factor \eqn{\eta_0}. See Details. Defaults to 1.0.
+//'   \item \code{qpos: } Position of systematic differences in non-selectivity.
+//'                       \code{0} signify lower concentration interval and
+//'                       \code{1} signify upper. Only used if \code{qran} is specified and \code{prop} is not.
+//'   \item \code{qran: } Interquantile range (proportion of total range, 0 to 1) where systematic differences in
+//'                       non-selectivity should have its effect. E.g., 0.3 means the lower or upper 30% of the range. Only used if \code{prop} is not specified.
+//'   \item \code{prop: } Average proportion (0 to 1) of clinical samples affected by
+//'                       random differences in non-selectivity. If specified, overrides \code{qpos}/\code{qran}. Defaults to 0.
+//'   \item \code{mmax: } The maximum relocation magnitude multiplier,
+//'                       \eqn{m_{\max}}. This number is a multiplier of the
+//'                       *base* standard deviation \code{sqrt(base_sd_x^2 + base_sd_y^2)}. Only effective
+//'                       if \code{prop > 0} or \code{qran > 0}. Defaults to 0.
+//'   \item \code{b0: } For systematic linear bias between IVD-MDs (intercept). Defaults to 0.
+//'   \item \code{b1: } For systematic linear bias between IVD-MDs (slope). Defaults to 1.
+//'   \item \code{c0: } Intercept for linear transformation from latent \eqn{\xi_i} to \eqn{\tau_i}. Defaults to 0. (Often ignored).
+//'   \item \code{c1: } Slope for linear transformation from latent \eqn{\xi_i} to \eqn{\tau_i}. Defaults to 1. (Often ignored).
+//'   \item \code{error_dist: } The distribution to simulate measurement error
+//'                             components (\eqn{h_{ir}, v_{ir}}) from. Possible choices include \code{"norm"}
+//'                             (normal distribution, default) and
+//'                             \code{"lt"} (location-scale student t-distribution).
+//'   \item \code{dfx: } The degrees of freedom for the measurement error
+//'                      components in IVD-MD B if \code{error_dist = "lt"}.
+//'                      Defaults to 5.0 if not otherwise specified. Must be > 0.
+//'   \item \code{dfy: } The degrees of freedom for the measurement error
+//'                      components in IVD-MD A if \code{error_dist = "lt"}.
+//'                      Defaults to 5.0 if not otherwise specified. Must be > 0.
+//'   \item \code{md_method: } Method for simulating missing data. Possible
+//'                            choices include \code{"none"} (no missing data, default),
+//'                            \code{"mar"} (missing at random),
+//'                            \code{"mnar"} (missing not at random based on value vs threshold),
+//'                            \code{"mnar0"} (missing not at random if value < threshold, treats negative values as missing if threshold <= 0),
+//'                            \code{"marmnar"} (combination of MAR and MNAR),
+//'                            \code{"marmnar0"} (combination of MAR and MNAR0).
+//'   \item \code{mar_prob: } The probability (value between 0 and 1) of having
+//'                           a measurement missing at random. Only relevant if
+//'                           \code{md_method} includes \code{"mar"}. Defaults to 0.05 if needed.
+//'   \item \code{mnar_threshold: } The threshold (\code{double}) below which
+//'                                 a measurement is considered missing for MNAR.
+//'                                 Only relevant if \code{md_method} includes \code{"mnar"} or \code{"mnar0"}.
+//'                                 Defaults to \code{cil} if \code{md_method = "mnar"} or \code{"marmnar"}.
+//'                                 Defaults to 0.0 if \code{md_method = "mnar0"} or \code{"marmnar0"}.
+//'   \item \code{g: } A custom R function defining the relationship \eqn{g(\tau_i) = E[y_{ir} | \tau_i]}.
+//'                    It should take a single numeric value (\eqn{\tau_i}) and return a single numeric value.
+//'                    Overrides \code{type}, \code{b0}, \code{b1}, and non-selectivity parameters (\code{prop}, \code{qpos}, \code{qran}, \code{mmax}).
+//'                    Using this can be slower than built-in types.
+//'   \item \code{obs_tau: } A \code{numeric} vector of pre-defined \eqn{\tau_i} values.
+//'                          If specified, \code{n} becomes \code{length(obs_tau)}, and \code{dist}, \code{cil}, \code{ciu}, \code{df_tau} are ignored.
+//' }
+//' @param type A \code{integer} specifying built-in functions for \eqn{g(\tau_i)}. Ignored if \code{g} is provided in \code{parameters}.
+//'        \itemize{
+//'           \item \code{type = 0: } Linear relationship \eqn{g(\tau_i) = \beta_0 + \beta_1 \tau_i + \mathrm{nonselectivity}}. (Default)
+//'           \item \code{type = 1: } Non-linear \eqn{g(\tau_i) = \tau_i + 0.90 \cdot \sin(0.40 \cdot \tau_i^{1.06})}
+//'           \item \code{type = 2: } Non-linear \eqn{g(\tau_i) = \tau_i + 0.05 \cdot \exp(0.16 \cdot \tau_i^{1.35})}
+//'           \item \code{type = 3: } Non-linear \eqn{g(\tau_i) = \tau_i - \exp[-0.125 \cdot (\tau_i - 1.50)^2]}
+//'        }
+//' @param AR A \code{logical} value. If \code{TRUE}, data includes all replicates. If \code{FALSE}, the mean of replicates (MOR) for each sample is returned (handling NAs appropriately).
+//' @param include_parameters A \code{logical} value. If \code{TRUE}, the parameters used in the simulation are returned as a list element named \code{parameters}. Defaults to \code{FALSE}.
+//'
+//' @description
+//' Simulates method comparison data based on specified parameters, allowing for various complexities like non-linear relationships, heteroscedasticity, non-selectivity, and missing data.
+//'
+//' @details
+//' The simulation generates measurement pairs \eqn{(x_{ir}, y_{ir})} for sample \eqn{i} and replicate \eqn{r}, based on the model:
+//' \deqn{x_{ir} = \tau_i + h_{ir}}
+//' \deqn{y_{ir} = g(\tau_i) + v_{ir}}
+//' where \eqn{\tau_i} represents the true (latent) value for sample \eqn{i} for method B (often assumed \eqn{\tau_i = c_0 + c_1 \xi_i}), \eqn{g(\tau_i)} is the expected value for method A given \eqn{\tau_i}, and \eqn{h_{ir}} and \eqn{v_{ir}} are measurement errors.
+//'
+//' \strong{True Values (\eqn{\tau_i}):} Generated based on \code{dist}, \code{cil}, \code{ciu}, unless \code{obs_tau} is provided.
+//'
+//' \strong{Relationship (\eqn{g}):} Defined by \code{type} or a custom R function \code{g}. For \code{type = 0}, it incorporates linear bias (\code{b0}, \code{b1}) and potential non-selectivity effects (\code{prop}, \code{qpos}, \code{qran}, \code{mmax}). Non-selectivity effects add an offset for specific samples.
+//'
+//' \strong{Measurement Errors (\eqn{h_{ir}, v_{ir}}):} Generated based on \code{error_dist} (\code{"norm"} or \code{"lt"}) with standard deviations derived from \code{cvx}, \code{cvy} and potentially modified by heteroscedasticity parameters \code{eta} and \code{eta0}. The model used is \eqn{SD(\tau_i) = \mathrm{base\_sd} \times (\eta_0 + (\tau_i / \mathrm{average\_tau})^\eta)}, where \eqn{\mathrm{base\_sd}} is \code{average_tau * cv}, and \code{average_tau} is \code{0.5*(cil+ciu)}. If \code{eta = 0} and \code{eta0 = 1}, this results in constant CV.
+//'
+//' \strong{Non-Selectivity:} If \code{prop > 0}, a random proportion of samples have their \eqn{g(\tau_i)} value shifted by a random amount up to \code{mmax} times the base combined SD. If \code{qran > 0} (and \code{prop = 0}), samples in the specified quantile range (\code{qpos}, \code{qran}) have their \eqn{g(\tau_i)} shifted systematically based on their position within that range, up to \code{mmax}.
+//'
+//' \strong{Missing Data:} Can be introduced using \code{md_method}. \code{"mar"} introduces NAs randomly. \code{"mnar"} introduces NAs if the simulated value falls below \code{mnar_threshold}. \code{"mnar0"} is similar to \code{"mnar"} but defaults the threshold to 0 and handles potentially negative simulated values as missing below this threshold.
+//'
+//' \strong{Negative Values:} If \code{md_method} is not \code{"mnar0"}, any simulated negative measurement values \eqn{x_{ir}} or \eqn{y_{ir}} are clamped at 0.0. If \code{md_method = "mnar0"}, values below the \code{mnar_threshold} (defaulting to 0) are set to \code{NA_REAL}. Choose parameters (\code{cil}, \code{cvx}, \code{cvy}, \code{mmax}) carefully to avoid excessive negative values if they are physically implausible.
+//'
+//' \strong{Output Conversion:} The returned list can be efficiently converted to other formats using \code{as.data.frame()}, \code{as.data.table::data.table()}, \code{tibble::as_tibble()}, or \code{data.table::setDT()}.
+//'
+//' @return A \code{list}.
+//' If \code{include_parameters = FALSE}:
+//' Contains elements \code{SampleID}, \code{MP_A}, \code{MP_B}. If \code{AR = TRUE}, also includes \code{ReplicateID}.
+//' If \code{include_parameters = TRUE}:
+//' A list containing two elements:
+//' \itemize{
+//'   \item \code{simulated_data:} The list described above.
+//'   \item \code{parameters:} A list of the parameter values actually used in the simulation.
+//' }
+//'
+//' @examples
+//' # Load package (assuming it's built and loaded)
+//' # library(yourPackageName) # Replace with your package name
+//'
+//' # Default simulation (n=25, R=3, linear, const CV)
+//' default_sim <- sim_eqa_data()
+//' print(head(as.data.frame(default_sim)))
+//'
+//' # Simulation with heteroscedasticity and t-distributed errors
+//' params_hetero_t <- list(n = 50, R = 2, cvx = 0.02, cvy = 0.03,
+//'                         cil = 10, ciu = 100, eta = 0.5, eta0 = 0.5,
+//'                         error_dist = "lt", dfx = 4, dfy = 6)
+//' sim_hetero_t <- sim_eqa_data(params_hetero_t, AR = TRUE)
+//' # plot(sim_hetero_t$MP_B, sim_hetero_t$MP_A) # Requires conversion first
+//'
+//' # Simulation with random non-selectivity (type 0) and MAR missing data
+//' params_nonselect_mar <- list(n = 40, R = 4, cvx = 0.01, cvy = 0.01,
+//'                              cil = 5, ciu = 50, prop = 0.15, mmax = 4,
+//'                              md_method = "mar", mar_prob = 0.1)
+//' sim_nonselect_mar <- sim_eqa_data(params_nonselect_mar, type = 0, AR = TRUE,
+//'                                   include_parameters = TRUE)
+//' print(head(as.data.frame(sim_nonselect_mar$simulated_data)))
+//' print(sim_nonselect_mar$parameters)
+//'
+//' # Simulation with systematic non-selectivity (upper range) and MNAR missing data
+//' params_syst_nonselect_mnar <- list(n = 30, R = 2, cvx = 0.015, cvy = 0.015,
+//'                                    cil = 2, ciu = 20, qpos = 1, qran = 0.25, mmax = 5,
+//'                                    md_method = "mnar") # threshold defaults to cil=2
+//' sim_syst_nonselect_mnar <- sim_eqa_data(params_syst_nonselect_mnar, type = 0, AR = FALSE)
+//' print(head(as.data.frame(sim_syst_nonselect_mnar)))
+//'
+//' # Simulation using a custom non-linear function g and observed tau
+//' my_g <- function(tau) { tau + 0.1 * tau^2 }
+//' true_taus <- c(1, 3, 5, 7, 9, 11, 13, 15)
+//' params_custom_g <- list(R = 5, cvx = 0.005, cvy = 0.008, obs_tau = true_taus, g = my_g)
+//' sim_custom_g <- sim_eqa_data(params_custom_g, AR = TRUE)
+//' print(head(as.data.frame(sim_custom_g)))
+//'
+// [[Rcpp::export]]
+List sim_eqa_data2(Nullable<List> parameters = R_NilValue,
+                  int type = 0,
+                  bool AR = false, // Changed default to TRUE as it seems more common
+                  bool include_parameters = false) {
+ 
+ // --- Parameter Initialization and Validation ---
+ List params;
+ if (parameters.isNotNull()) {
+   params = as<List>(parameters);
+ }
+ 
+ // Use containsElementNamed for safer checking
+ int n = params.containsElementNamed("n") ? as<int>(params["n"]) : 25;
+ int R = params.containsElementNamed("R") ? as<int>(params["R"]) : 3;
+ double cvx = params.containsElementNamed("cvx") ? as<double>(params["cvx"]) : 0.01;
+ double cvy = params.containsElementNamed("cvy") ? as<double>(params["cvy"]) : 0.01;
+ double cve = params.containsElementNamed("cve") ? as<double>(params["cve"]) : 0.00;
+ double zeta0 = params.containsElementNamed("zeta0") ? as<double>(params["zeta0"]) : 1.00;
+ double cil = params.containsElementNamed("cil") ? as<double>(params["cil"]) : 2.0;
+ double ciu = params.containsElementNamed("ciu") ? as<double>(params["ciu"]) : 10.0;
+ std::string dist = params.containsElementNamed("dist") ? as<std::string>(params["dist"]) : "unif";
+ double df_tau = params.containsElementNamed("df_tau") ? as<double>(params["df_tau"]) : 5.0;
+ double eta = params.containsElementNamed("eta") ? as<double>(params["eta"]) : 0.0;
+ double eta0 = params.containsElementNamed("eta0") ? as<double>(params["eta0"]) : 1.0;
+ double prop = params.containsElementNamed("prop") ? as<double>(params["prop"]) : 0.0;
+ int qpos = params.containsElementNamed("qpos") ? as<int>(params["qpos"]) : 0; // Default 0 (lower), used if qran > 0 & prop = 0
+ double qran = params.containsElementNamed("qran") ? as<double>(params["qran"]) : 0.0;
+ double mmax = params.containsElementNamed("mmax") ? as<double>(params["mmax"]) : 0.0;
+ double b0 = params.containsElementNamed("b0") ? as<double>(params["b0"]) : 0.0;
+ double b1 = params.containsElementNamed("b1") ? as<double>(params["b1"]) : 1.0;
+ double c0 = params.containsElementNamed("c0") ? as<double>(params["c0"]) : 0.0;
+ double c1 = params.containsElementNamed("c1") ? as<double>(params["c1"]) : 1.0;
+ std::string error_dist = params.containsElementNamed("error_dist") ? as<std::string>(params["error_dist"]) : "norm";
+ double dfx = params.containsElementNamed("dfx") ? as<double>(params["dfx"]) : 5.0;
+ double dfy = params.containsElementNamed("dfy") ? as<double>(params["dfy"]) : 5.0;
+ std::string md_method = params.containsElementNamed("md_method") ? as<std::string>(params["md_method"]) : "none";
+ double mar_prob = params.containsElementNamed("mar_prob") ? as<double>(params["mar_prob"]) : 0.05; // Default if needed later
+ double mnar_threshold = params.containsElementNamed("mnar_threshold") ? as<double>(params["mnar_threshold"]) : R_PosInf; // Default placeholder
+ bool obs_tau_exists = params.containsElementNamed("obs_tau");
+ bool g_exists = params.containsElementNamed("g");
+
+ // --- Input Validation ---
+ if (R < 1) Rcpp::stop("R (number of replicates) must be >= 1.");
+ if (cvx < 0) Rcpp::stop("cvx must be non-negative.");
+ if (cvy < 0) Rcpp::stop("cvy must be non-negative.");
+ if (ciu <= cil) Rcpp::stop("ciu must be greater than cil.");
+ if ((dist == "lst" || dist == "t") && df_tau <= 0) Rcpp::stop("df_tau must be positive for lst distribution.");
+ if (error_dist == "lt" && dfx <= 0) Rcpp::stop("dfx must be positive for lt error distribution.");
+ if (error_dist == "lt" && dfy <= 0) Rcpp::stop("dfy must be positive for lt error distribution.");
+ if (prop < 0 || prop > 1) Rcpp::stop("prop must be between 0 and 1.");
+ if (qran < 0 || qran > 1) Rcpp::stop("qran must be between 0 and 1.");
+ if (md_method.find("mar") != std::string::npos && (mar_prob < 0 || mar_prob > 1)) Rcpp::stop("mar_prob must be between 0 and 1.");
+ 
+ 
+ // Adjust defaults/logic based on inputs
+ NumericVector obs_tau_values;
+ if (obs_tau_exists) {
+   obs_tau_values = as<NumericVector>(params["obs_tau"]);
+   n = obs_tau_values.size();
+   dist = "observed"; // Mark dist as observed
+   if (n == 0) Rcpp::stop("obs_tau is empty.");
+ }
+ 
+ bool use_mar = (md_method.find("mar") != std::string::npos);
+ bool use_mnar = (md_method.find("mnar") != std::string::npos); // Catches mnar, mnar0, marmnar, marmnar0
+ bool use_mnar0_logic = (md_method.find("mnar0") != std::string::npos); // Catches mnar0, marmnar0
+ 
+ if (use_mnar && !params.containsElementNamed("mnar_threshold")) {
+   mnar_threshold = use_mnar0_logic ? 0.0 : cil;
+ } else if (!use_mnar) {
+   // If MNAR is not used, set threshold effectively to negative infinity
+   // so the check `value < mnar_threshold` is always false.
+   mnar_threshold = R_NegInf;
+ }
+ // If MAR is needed but probability wasn't given, use default
+ if (use_mar && !params.containsElementNamed("mar_prob")) {
+   // mar_prob already defaulted to 0.05 above
+ } else if (!use_mar) {
+   mar_prob = 0.0; // Ensure it's 0 if MAR not selected
+ }
+ 
+ 
+ // Determine if random non-selectivity (prop) or systematic (qran) is used
+ bool use_prop_nonselectivity = (prop > 0 && mmax != 0);
+ bool use_qran_nonselectivity = (!use_prop_nonselectivity && qran > 0 && mmax != 0);
+ 
+ // --- Simulate True Values (tau) ---
+ NumericVector tau(n);
+ double mu_tau = 0.0, sigma_tau = 0.0; // Parameters for generating tau if needed
+ 
+ if (dist == "observed") {
+   tau = clone(obs_tau_values); // Use provided values
+ } else if (dist == "unif") {
+   tau = runif(n, cil, ciu);
+ } else {
+   // Calculate parameters needed for norm, lst, lnorm
+   if (dist == "norm") {
+     mu_tau = 0.5 * (cil + ciu);
+     sigma_tau = 0.5 * (ciu - cil) / R::qnorm(0.99, 0.0, 1.0, true, false);
+     tau = rnorm(n, mu_tau, sigma_tau);
+   } else if (dist == "lst" || dist == "t") { // Treat t as lst
+     dist = "lst"; // Standardize name
+     mu_tau = 0.5 * (cil + ciu);
+     sigma_tau = 0.5 * (ciu - cil) / R::qt(0.99, df_tau, true, false);
+     NumericVector rt_vals = rt(n, df_tau);
+     tau = mu_tau + sigma_tau * rt_vals;
+   } else if (dist == "lnorm") {
+     // Ensure cil > 0 for lnorm
+     if (cil <= 0) Rcpp::stop("cil must be > 0 for dist = 'lnorm'.");
+     mu_tau = 0.5 * (log(ciu) + log(cil)); // Mean of log(tau)
+     sigma_tau = 0.5 * (log(ciu) - log(cil)) / R::qnorm(0.99, 0.0, 1.0, true, false); // SD of log(tau)
+     tau = rlnorm(n, mu_tau, sigma_tau);
+   } else {
+     Rcpp::stop("Unknown distribution specified for 'dist'.");
+   }
+   // Optional: Clamp generated values to bounds? (Could distort distribution)
+   // tau = pmax(cil, pmin(ciu, tau)); // Consider if necessary
+ }
+ 
+ // --- Prepare for Simulation ---
+ int nR = n * R;
+ IntegerVector SampleID(nR);
+ IntegerVector ReplicateID(nR);
+ NumericVector MP_A(nR);
+ NumericVector MP_B(nR);
+ 
+ IntegerVector SampleID_mor(n); // For AR = FALSE
+ NumericVector MP_A_mor(n);     // For AR = FALSE
+ NumericVector MP_B_mor(n);     // For AR = FALSE
+ 
+ double average_tau = 0.5 * (cil + ciu); // Reference for heteroscedasticity
+ if (dist == "lnorm" && average_tau > 0) { // Use geometric mean center if log-normal approx
+   average_tau = exp(mu_tau); // More representative center on original scale
+ } else if (dist == "observed"){
+   if (n > 0) average_tau = Rcpp::mean(tau); // Use empirical mean if observed
+ }
+ if (average_tau <= 0) average_tau = 1.0; // Avoid division by zero/negatives
+ 
+ double base_x = average_tau * cvx; // Base SD for method B
+ double base_y = average_tau * cvy; // Base SD for method A
+ double base_e = average_tau * cve;
+ double base_sd_combined = std::sqrt(base_x * base_x + base_y * base_y);
+ if (base_sd_combined == 0 && (use_prop_nonselectivity || use_qran_nonselectivity)) {
+   Rcpp::warning("mmax specified but base SDs are zero. Non-selectivity effect will be zero.");
+   base_sd_combined = 1.0; // Avoid division by zero later
+ }
+ 
+ 
+ // Parameters for systematic non-selectivity (qran)
+ double qlim_lower = cil;
+ double qlim_upper = ciu;
+ double qrange_width = ciu - cil;
+ double qnorm_factor = 1.0; // Normalization factor for pbeta calculation
+ int qdir = 1; // Direction of shift (+1 or -1)
+ 
+ if (use_qran_nonselectivity) {
+   qrange_width = (ciu - cil) * qran;
+   if (qpos == 0) { // Lower end
+     qlim_upper = cil + qrange_width;
+     qnorm_factor = qrange_width;
+   } else { // Upper end (qpos == 1 or other)
+     qlim_lower = ciu - qrange_width;
+     qnorm_factor = qrange_width;
+   }
+   if (qnorm_factor <= 0) qnorm_factor = 1.0; // Avoid division by zero
+   
+   // Determine direction randomly if not specified via 'qdir' param (undocumented)
+   if (!params.containsElementNamed("qdir")) {
+     qdir = (R::runif(0, 1) < 0.5) ? -1 : 1;
+   } else {
+     qdir = as<int>(params["qdir"]);
+     qdir = (qdir >= 0) ? 1 : -1; // Ensure +1 or -1
+   }
+ }
+ 
+ 
+ // --- Main Simulation Loop ---
+ for (int i = 0; i < n; ++i) {
+   double tau_i = tau[i];
+   double true_b = c0 + tau_i * c1; // True value underlying method B for sample i
+   
+   // Calculate sample-specific SDs (Heteroscedasticity)
+   // Model: sd = base_sd * (eta0 + (tau_i / average_tau)^eta)
+   // Note: If average_tau is <= 0, power calculation is skipped.
+   double sdx = base_x;
+   double sdy = base_y;
+   double sde = base_e;
+   if (zeta0 > 1.0) {
+     double vare = (pow(sdy, 2.0) + pow(b1, 2.0) * pow(sdx, 2.0)) * (zeta0 - 1);
+     sde = sqrt(vare);
+   }
+   else if (zeta0 < 1.0) {
+     sde = 0.0;
+   }
+   
+   if (average_tau > 0 && (eta != 0.0 || eta0 != 1.0)) {
+     double rel_conc = tau_i / average_tau;
+     if (rel_conc < 0) rel_conc = 0; // Avoid issues with negative tau in power
+     double hetero_factor = eta0 + ((eta != 0.0) ? pow(rel_conc, eta) : 0.0);
+     sdx = base_x * hetero_factor;
+     sdy = base_y * hetero_factor;
+   }
+   // Ensure SDs are not negative (can happen with extreme eta/eta0)
+   if (sdx < 0) sdx = 0;
+   if (sdy < 0) sdy = 0;
+   
+   
+   // Calculate non-selectivity offset for this sample (only if type=0 and not custom g)
+   double nonselectivity_offset = 0.0;
+   bool is_affected = false; // Flag if sample i is affected by non-selectivity
+   
+   if (!g_exists && type == 0) {
+     if (use_prop_nonselectivity) {
+       if (R::runif(0, 1) < prop) {
+         is_affected = true;
+         double sign_reloc = (R::runif(0, 1) < 0.5) ? -1.0 : 1.0;
+         // Use Beta(2,2) for magnitude distribution centered at 0.5 * max
+         nonselectivity_offset = R::rbeta(2.0, 2.0) * sign_reloc * mmax * base_sd_combined;
+       }
+     } else if (use_qran_nonselectivity) {
+       double relative_pos = 0.0; // Position within the affected quantile range (0 to 1)
+       if (qpos == 0 && tau_i < qlim_upper) { // Affected in lower range
+         is_affected = true;
+         // Calculate relative position (0=cil, 1=qlim_upper)
+         relative_pos = (tau_i - cil) / qnorm_factor;
+         
+       } else if (qpos != 0 && tau_i > qlim_lower) { // Affected in upper range
+         is_affected = true;
+         // Calculate relative position (0=qlim_lower, 1=ciu)
+         relative_pos = (tau_i - qlim_lower) / qnorm_factor;
+       }
+       
+       if (is_affected) {
+         relative_pos = std::max(0.0, std::min(1.0, relative_pos)); // Clamp to [0, 1]
+         // Use pbeta-like shape for magnitude based on position
+         // Centered shape using 2*pbeta - 1 might be complex, use linear for now?
+         // Or simpler: scale magnitude linearly with position?
+         // Let's try: magnitude increases towards the *outer* edge of the range
+         double magnitude_factor;
+         if (qpos == 0) { // Magnitude increases as tau decreases towards cil
+           magnitude_factor = R::pbeta(1.0 - relative_pos, 2.0, 2.0, true, false); // Use pbeta for shape
+         } else { // Magnitude increases as tau increases towards ciu
+           magnitude_factor = R::pbeta(relative_pos, 2.0, 2.0, true, false);
+         }
+         // Scale by mmax and base SD, apply direction
+         nonselectivity_offset = magnitude_factor * mmax * base_sd_combined * static_cast<double>(qdir);
+       }
+     }
+   } // end if (!g_exists && type == 0)
+   
+   // --- Replicate Loop ---
+   double sum_a = 0.0, sum_b = 0.0;
+   int count_a = 0, count_b = 0;
+   double random_dins = R::rnorm(0.0, sde);
+   
+   for (int r = 0; r < R; ++r) {
+     int current_idx = i * R + r;
+     SampleID[current_idx] = i + 1;
+     ReplicateID[current_idx] = r + 1;
+     
+     // Calculate expected value for A based on g(tau) or type
+     double expected_a;
+     if (g_exists) {
+       Function actual_g_func = as<Function>(params["g"]); 
+       expected_a = call_custom_g(true_b, actual_g_func) + random_dins; // Uses true_b as input to g
+     } else if (type == 1) {
+       expected_a = true_b + 0.9 * sin(0.4 * pow(fmax(0.0, true_b), 1.06)) + random_dins; // Use fmax to avoid pow issues if true_b<0
+     } else if (type == 2) {
+       expected_a = true_b + 0.05 * exp(0.16 * pow(fmax(0.0, true_b), 1.35)) + random_dins;
+     } else if (type == 3) {
+       // Original formula: exp(-0.5 * pow((true_b - 1.5)/2.0, 2))
+       // R's dnorm(x, mu, sd) = 1/(sqrt(2*pi)*sd) * exp(- (x-mu)^2 / (2*sd^2) )
+       // Let mu=1.5, sd=sqrt(2). Then exp(- (x-1.5)^2 / (2*sd^2)) = exp(- (x-1.5)^2 / 4)
+       // The formula in the code was exp[-0.125 * (tau_i - 1.50)^2] = exp[-(tau_i-1.5)^2 / 8] -> sd=2
+       // Let's use the code's formula:
+       expected_a = true_b - exp(-0.125 * (true_b - 1.5) * (true_b - 1.5)) + random_dins;
+     } else { // type == 0 (linear + potential non-selectivity)
+       expected_a = b0 + true_b * b1 + nonselectivity_offset + random_dins;
+     }
+     
+     // Generate measurement errors
+     double error_x = 0.0, error_y = 0.0;
+     if (error_dist == "lt") {
+       if (sdx > 0) error_x = sdx * R::rt(dfx);
+       if (sdy > 0) error_y = sdy * R::rt(dfy);
+     } else { // Default to norm
+       if (sdx > 0) error_x = R::rnorm(0.0, sdx);
+       if (sdy > 0) error_y = R::rnorm(0.0, sdy);
+     }
+     
+     // Calculate simulated measurements
+     double current_b = true_b + error_x;
+     double current_a = expected_a + error_y;
+     
+     // Handle Missing Data (MAR / MNAR)
+     bool missing_a = false;
+     bool missing_b = false;
+     
+     if (use_mar) {
+       if (R::runif(0, 1) < mar_prob) missing_a = true;
+       if (R::runif(0, 1) < mar_prob) missing_b = true;
+     }
+     if (use_mnar) {
+       // Check against threshold BEFORE clamping/NA conversion for mnar0
+       if (!missing_a && current_a < mnar_threshold) missing_a = true;
+       if (!missing_b && current_b < mnar_threshold) missing_b = true;
+     }
+     
+     // Handle Negative Values & Final Assignment
+     // If mnar0 logic is active, negatives below threshold become NA handled by 'missing_x' flag
+     // Otherwise, clamp negatives at 0.
+     if (!missing_a) {
+       if (!use_mnar0_logic && current_a < 0.0) {
+         current_a = 0.0;
+       }
+       MP_A[current_idx] = current_a;
+       if (!AR) sum_a += current_a; // Add to sum only if not missing
+       count_a++;                  // Count non-missing replicates
+     } else {
+       MP_A[current_idx] = NA_REAL;
+     }
+     
+     if (!missing_b) {
+       if (!use_mnar0_logic && current_b < 0.0) {
+         current_b = 0.0;
+       }
+       MP_B[current_idx] = current_b;
+       if (!AR) sum_b += current_b; // Add to sum only if not missing
+       count_b++;                  // Count non-missing replicates
+     } else {
+       MP_B[current_idx] = NA_REAL;
+     }
+     
+   } // end replicate loop (r)
+   
+   // Calculate Mean of Replicates if AR = FALSE
+   if (!AR) {
+     SampleID_mor[i] = i + 1;
+     MP_A_mor[i] = (count_a > 0) ? (sum_a / static_cast<double>(count_a)) : NA_REAL;
+     MP_B_mor[i] = (count_b > 0) ? (sum_b / static_cast<double>(count_b)) : NA_REAL;
+   }
+   
+ } // end sample loop (i)
+ 
+ // --- Prepare Output ---
+ List sim_data;
+ if (AR) {
+   sim_data = List::create(Named("SampleID") = SampleID,
+                           Named("ReplicateID") = ReplicateID,
+                           Named("MP_A") = MP_A,
+                           Named("MP_B") = MP_B);
+ } else {
+   sim_data = List::create(Named("SampleID") = SampleID_mor,
+                           Named("MP_A") = MP_A_mor,
+                           Named("MP_B") = MP_B_mor);
+ }
+ 
+ if (include_parameters) {
+   List used_parameters = List::create(
+     Named("n") = n,
+     Named("R") = R,
+     Named("cvx") = cvx,
+     Named("cvy") = cvy,
+     Named("base_sdx") = base_x, // Base SD used
+     Named("base_sdy") = base_y, // Base SD used
+     Named("cil") = cil,
+     Named("ciu") = ciu,
+     Named("dist") = dist,
+     Named("df_tau") = (dist == "lst" ? df_tau : NA_REAL),
+     Named("eta") = eta,
+     Named("eta0") = eta0,
+     Named("prop") = prop,
+     Named("qpos") = (use_qran_nonselectivity ? qpos : NA_INTEGER),
+     Named("qran") = (use_qran_nonselectivity ? qran : NA_REAL),
+     Named("qdir") = (use_qran_nonselectivity ? qdir : NA_INTEGER),
+     // Named("qlim_lower") = (use_qran_nonselectivity ? qlim_lower : NA_REAL), // Maybe too much detail?
+     // Named("qlim_upper") = (use_qran_nonselectivity ? qlim_upper : NA_REAL), // Maybe too much detail?
+     Named("mmax") = mmax,
+     Named("b0") = b0,
+     Named("b1") = b1,
+     Named("c0") = c0,
+     Named("c1") = c1,
+     Named("error_dist") = error_dist,
+     Named("dfx") = (error_dist == "lt" ? dfx : NA_REAL),
+     Named("dfy") = (error_dist == "lt" ? dfy : NA_REAL),
+     Named("md_method") = md_method,
+     Named("mar_prob") = (use_mar ? mar_prob : NA_REAL),
+     Named("mnar_threshold") = (use_mnar ? mnar_threshold : NA_REAL),
+     Named("g_provided") = g_exists,
+     Named("type") = (g_exists ? NA_INTEGER : type),
+     Named("tau_provided") = obs_tau_exists
+   );
+   // Add tau values if they were generated/provided and parameter output is requested
+   // used_parameters["tau_values"] = tau; // Can make output large
+   
+   List out = List::create(Named("simulated_data") = sim_data,
+                           Named("parameters") = used_parameters);
+   return out;
+ } else {
+   return sim_data;
+ }
+}
+
+// Ensure Rcpp knows about the custom function helper (if needed elsewhere,
+// otherwise being static inline or just defined above main function is fine)
+// You might not need this explicit export if it's just a helper.
+// NumericVector custom_function(NumericVector x, Rcpp::Function func){
+//   NumericVector output = func(x);
+//   return output;
+// }
 
